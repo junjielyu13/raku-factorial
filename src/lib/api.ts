@@ -3,9 +3,9 @@ import { supabase } from './supabase';
 
 interface PunchInArgs {
   kind: 'in' | 'out';
-  latitude: number;
-  longitude: number;
-  accuracy_m: number;
+  latitude?: number | null;
+  longitude?: number | null;
+  accuracy_m?: number | null;
 }
 
 export interface ApiError {

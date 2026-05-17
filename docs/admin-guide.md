@@ -89,30 +89,20 @@ WHERE email = '离职员工邮箱';
 
 ---
 
-## 修改办公地点 / GPS 围栏
+## GPS 记录（无围栏）
 
-[SQL Editor](https://supabase.com/dashboard/project/gdacfthuunkcilcwwopb/sql/new) 跑：
+当前版本：**员工在任何位置都可以打卡**。GPS 坐标仅作记录，不阻止打卡。
 
-```sql
--- 改坐标和半径
-UPDATE public.office_locations
-SET latitude = 41.478107,
-    longitude = 2.084087,
-    radius_meters = 200
-WHERE id = '00000000-0000-0000-0000-000000000001';
-```
+- 打卡时浏览器会请求位置权限。允许的话坐标会写入 `punches` 表；不允许或拿不到 GPS 也能打卡，坐标存为 NULL
+- 管理员在 `https://raku-factorial.vercel.app/admin` 的今日打卡列表里能看到每条记录的 GPS（点击会跳转 Google Maps 显示具体位置 + 精度）
 
-- 经纬度从 Google Maps 右键 → "What's here?" 拿
-- `radius_meters` 越小越严格。建议 100-300。室内 GPS 飘的话可以放大一点
+如果以后想重新启用围栏（限制必须在办公地一定范围内才能打卡）：
 
-要新增第二个办公地点（员工分布在多地）：
+1. 在 Edge Function `supabase/functions/punch-in/index.ts` 里加回 haversine 距离检查（旧版本在 git history 中可以参考 `aa038f2` 之前的 commit）
+2. 更新 `office_locations` 表里的真实坐标
+3. 把 `punches.office_id` 重新设为 NOT NULL 并加上有意义的值
 
-```sql
-INSERT INTO public.office_locations (name, latitude, longitude, radius_meters)
-VALUES ('分部', 41.xxx, 2.xxx, 200);
-```
-
-打卡时系统会检查**任意一个 active 的办公点**，符合即通过。
+`office_locations` 表和 `_shared/haversine.ts` 函数都还保留着，启用围栏不需要重新写。
 
 ---
 

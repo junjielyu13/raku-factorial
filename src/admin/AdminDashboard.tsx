@@ -5,7 +5,10 @@ import { supabase } from '../lib/supabase';
 import { formatTime, formatDate, madridTodayRange } from '../lib/time';
 import type { EffectivePunch, Employee } from '../lib/types';
 
-interface Row extends EffectivePunch { employee: Pick<Employee, 'full_name' | 'email'> }
+interface Row extends EffectivePunch {
+  employee: Pick<Employee, 'full_name' | 'email'>;
+  punch: { latitude: number | null; longitude: number | null; accuracy_m: number | null } | null;
+}
 
 export function AdminDashboard() {
   const [rows, setRows] = useState<Row[]>([]);
@@ -14,7 +17,11 @@ export function AdminDashboard() {
     const { start, end } = madridTodayRange();
     const { data } = await supabase
       .from('effective_punches')
-      .select('*, employee:employees!effective_punches_employee_id_fkey(full_name, email)')
+      .select(`
+        *,
+        employee:employees!effective_punches_employee_id_fkey(full_name, email),
+        punch:punches!effective_punches_source_punch_id_fkey(latitude, longitude, accuracy_m)
+      `)
       .gte('effective_time', start)
       .lt('effective_time', end)
       .order('effective_time', { ascending: false });
@@ -43,12 +50,33 @@ export function AdminDashboard() {
       </header>
       {rows.length === 0 ? <div className="text-gray-500">今天还没人打卡</div> :
         <ul className="divide-y border rounded bg-white">
-          {rows.map(r => (
-            <li key={r.id} className="px-4 py-2 flex justify-between">
-              <span>{r.employee.full_name}</span>
-              <span>{r.kind === 'in' ? '上班' : '下班'} · {formatTime(r.effective_time)}</span>
-            </li>
-          ))}
+          {rows.map(r => {
+            const lat = r.punch?.latitude;
+            const lng = r.punch?.longitude;
+            const hasGps = typeof lat === 'number' && typeof lng === 'number';
+            return (
+              <li key={r.id} className="px-4 py-2 flex flex-col gap-1">
+                <div className="flex justify-between">
+                  <span className="font-medium">{r.employee.full_name}</span>
+                  <span>{r.kind === 'in' ? '上班' : '下班'} · {formatTime(r.effective_time)}</span>
+                </div>
+                <div className="text-xs text-gray-500">
+                  {hasGps ? (
+                    <a
+                      href={`https://www.google.com/maps?q=${lat},${lng}`}
+                      target="_blank" rel="noopener noreferrer"
+                      className="text-blue-700 hover:underline"
+                    >
+                      📍 {lat.toFixed(5)}, {lng.toFixed(5)}
+                      {typeof r.punch?.accuracy_m === 'number' && ` · ±${Math.round(r.punch.accuracy_m)}m`}
+                    </a>
+                  ) : (
+                    <span>📍 无 GPS 数据</span>
+                  )}
+                </div>
+              </li>
+            );
+          })}
         </ul>}
     </div>
   );

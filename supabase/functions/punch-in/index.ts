@@ -3,16 +3,13 @@ import {
   authenticate, adminClient, jsonResponse,
   handleCors, errorResponse, HttpError,
 } from "../_shared/auth.ts";
-import { haversineMeters } from "../_shared/haversine.ts";
 
 interface PunchBody {
   kind: 'in' | 'out';
-  latitude: number;
-  longitude: number;
-  accuracy_m: number;
+  latitude?: number | null;
+  longitude?: number | null;
+  accuracy_m?: number | null;
 }
-
-const MAX_ACCURACY_M    = 100;
 
 Deno.serve(async (req) => {
   try {
@@ -26,31 +23,14 @@ Deno.serve(async (req) => {
     if (body.kind !== 'in' && body.kind !== 'out') {
       throw new HttpError(400, 'BAD_KIND');
     }
-    if (typeof body.latitude !== 'number' || typeof body.longitude !== 'number') {
-      throw new HttpError(400, 'BAD_COORDS');
-    }
-    if (typeof body.accuracy_m !== 'number' || body.accuracy_m < 0) {
-      throw new HttpError(400, 'BAD_ACCURACY');
-    }
-    if (body.accuracy_m > MAX_ACCURACY_M) {
-      throw new HttpError(400, 'LOW_ACCURACY');
-    }
+
+    // GPS is recorded for audit but not enforced. Coordinates may be null
+    // (user denied permission, no GPS hardware, indoor failure, etc).
+    const lat = typeof body.latitude  === 'number' ? body.latitude  : null;
+    const lng = typeof body.longitude === 'number' ? body.longitude : null;
+    const acc = typeof body.accuracy_m === 'number' ? body.accuracy_m : null;
 
     const admin = adminClient();
-
-    // find an office where this position is within radius
-    const { data: offices, error: officesErr } = await admin
-      .from('office_locations')
-      .select('id, latitude, longitude, radius_meters')
-      .eq('active', true);
-    if (officesErr) throw officesErr;
-
-    const matchingOffice = (offices ?? []).find((o) => {
-      const d = haversineMeters(body.latitude, body.longitude, Number(o.latitude), Number(o.longitude));
-      return d <= o.radius_meters;
-    });
-    if (!matchingOffice) throw new HttpError(400, 'OUT_OF_GEOFENCE');
-
     const userAgent = req.headers.get('user-agent') ?? null;
     const fwdFor = req.headers.get('x-forwarded-for') ?? null;
     const ip = fwdFor?.split(',')[0]?.trim() ?? null;
@@ -58,10 +38,10 @@ Deno.serve(async (req) => {
     const { data: created, error: rpcErr } = await admin.rpc('create_punch', {
       p_employee_id: user.id,
       p_kind:        body.kind,
-      p_lat:         body.latitude,
-      p_lng:         body.longitude,
-      p_accuracy:    body.accuracy_m,
-      p_office_id:   matchingOffice.id,
+      p_lat:         lat,
+      p_lng:         lng,
+      p_accuracy:    acc,
+      p_office_id:   null,
       p_user_agent:  userAgent,
       p_ip:          ip,
     });
