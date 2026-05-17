@@ -1,0 +1,46 @@
+# .github/workflows/test.yml
+name: test
+on:
+  push: { branches: [main] }
+  pull_request: {}
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: denoland/setup-deno@v1
+        with:
+          deno-version: v1.x
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+      - name: Start Supabase
+        run: supabase start
+      - name: Apply migrations and seed
+        run: supabase db reset
+      - name: Run RLS tests
+        run: |
+          export PGPASSWORD=postgres
+          for f in tests/rls/*.test.sql; do
+            psql -h 127.0.0.1 -p 54322 -U postgres -d postgres -f "$f"
+          done
+      - name: Serve functions
+        run: |
+          supabase functions serve --no-verify-jwt > /tmp/functions.log 2>&1 &
+          sleep 5
+      - name: Run Edge Function tests
+        env:
+          SERVICE_ROLE_KEY: dummy   # overwritten below
+          ANON_KEY:         dummy
+        run: |
+          export SUPABASE_SERVICE_ROLE_KEY=$(supabase status -o json | jq -r .SERVICE_ROLE_KEY)
+          export SUPABASE_ANON_KEY=$(supabase status -o json | jq -r .ANON_KEY)
+          deno test --allow-all supabase/functions/_shared/haversine.test.ts
+          for d in supabase/functions/*/; do
+            name=$(basename "$d")
+            if [ "$name" = "_shared" ]; then continue; fi
+            if [ -f "${d}test.ts" ]; then
+              deno test --allow-all "${d}test.ts"
+            fi
+          done
