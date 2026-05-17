@@ -1,9 +1,9 @@
 // src/employee/EmployeeHistory.tsx
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../auth/useAuth';
-import { formatDateTime } from '../lib/time';
+import { formatDate, formatTime } from '../lib/time';
 import { useTranslation } from '../i18n/LanguageContext';
 import type { EffectivePunch } from '../lib/types';
 
@@ -23,20 +23,45 @@ export function EmployeeHistory() {
       .then(({ data }) => { setRows((data as EffectivePunch[]) ?? []); setLoading(false); });
   }, [profile]);
 
+  const groups = useMemo(() => {
+    const m = new Map<string, EffectivePunch[]>();
+    for (const r of rows) {
+      const key = formatDate(r.effective_time);
+      if (!m.has(key)) m.set(key, []);
+      m.get(key)!.push(r);
+    }
+    return Array.from(m.entries());
+  }, [rows]);
+
   return (
-    <div className="max-w-md mx-auto p-6 space-y-4">
-      <Link to="/" className="text-blue-700 underline text-sm">{t('common.back')}</Link>
-      <h1 className="text-xl font-semibold">{t('history.title')}</h1>
-      {loading ? <div>{t('common.loading')}</div> :
-        rows.length === 0 ? <div className="text-gray-500">{t('history.noRecords')}</div> :
-        <ul className="divide-y border rounded bg-white">
-          {rows.map(r => (
-            <li key={r.id} className="px-4 py-2 flex justify-between">
-              <span className="text-gray-700">{formatDateTime(r.effective_time)}</span>
-              <span>{r.kind === 'in' ? t('punch.in') : t('punch.out')}</span>
-            </li>
+    <div className="min-h-full max-w-md mx-auto px-4 py-6 space-y-4">
+      <Link to="/" className="inline-block text-sm text-emerald-700 hover:underline">{t('common.back')}</Link>
+      <h1 className="text-2xl font-bold text-slate-900">{t('history.title')}</h1>
+
+      {loading ? (
+        <div className="app-card px-4 py-6 text-center text-slate-500 text-sm">{t('common.loading')}</div>
+      ) : rows.length === 0 ? (
+        <div className="app-card px-4 py-6 text-center text-slate-500 text-sm">{t('history.noRecords')}</div>
+      ) : (
+        <div className="space-y-4">
+          {groups.map(([date, items]) => (
+            <section key={date} className="space-y-2">
+              <h2 className="px-1 text-xs font-semibold uppercase tracking-wider text-slate-500">{date}</h2>
+              <ul className="app-card divide-y divide-slate-100 overflow-hidden">
+                {items.map(r => (
+                  <li key={r.id} className="px-4 py-3 flex items-center gap-3">
+                    <span className={`inline-flex items-center justify-center h-8 w-8 rounded-full text-xs font-semibold ${r.kind === 'in' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
+                      {r.kind === 'in' ? '▶' : '■'}
+                    </span>
+                    <span className="text-slate-700 flex-1">{r.kind === 'in' ? t('punch.in') : t('punch.out')}</span>
+                    <span className="font-mono tabular-nums text-slate-900">{formatTime(r.effective_time)}</span>
+                  </li>
+                ))}
+              </ul>
+            </section>
           ))}
-        </ul>}
+        </div>
+      )}
     </div>
   );
 }

@@ -35,34 +35,42 @@ export function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
-      <div className="fixed top-4 right-4"><LanguagePicker /></div>
-      <form onSubmit={submit} className="bg-white p-8 rounded shadow w-full max-w-sm space-y-4">
-        <h1 className="text-xl font-semibold">{t('login.title')}</h1>
-        <label className="block">
-          <span className="text-sm text-gray-700">{t('login.email')}</span>
-          <input
-            type="email" required value={email} onChange={(e) => setEmail(e.target.value)}
-            placeholder="your@email.com" autoComplete="email"
-            className="w-full px-3 py-2 border rounded mt-1"
-          />
-        </label>
-        <label className="block">
-          <span className="text-sm text-gray-700">{t('login.password')}</span>
-          <input
-            type="password" required value={password} onChange={(e) => setPassword(e.target.value)}
-            autoComplete="current-password"
-            className="w-full px-3 py-2 border rounded mt-1"
-          />
-        </label>
-        <button
-          type="submit" disabled={busy}
-          className="w-full py-2 bg-blue-600 text-white rounded disabled:opacity-50"
-        >
-          {busy ? t('login.submitting') : t('login.submit')}
-        </button>
-        {error && <p className="text-red-700 text-sm">{error}</p>}
-      </form>
+    <div className="min-h-full flex items-center justify-center px-4 py-10">
+      <div className="fixed top-4 right-4 z-10"><LanguagePicker /></div>
+      <div className="w-full max-w-sm space-y-6">
+        <div className="text-center space-y-3">
+          <div className="inline-flex items-center justify-center h-14 w-14 rounded-2xl bg-emerald-600 text-white text-2xl font-bold shadow-md">
+            ⏱
+          </div>
+          <h1 className="text-2xl font-bold text-slate-900">{t('login.title')}</h1>
+        </div>
+        <form onSubmit={submit} className="app-card p-6 space-y-4">
+          <label className="block space-y-1.5">
+            <span className="text-sm font-medium text-slate-700">{t('login.email')}</span>
+            <input
+              type="email" required value={email} onChange={(e) => setEmail(e.target.value)}
+              placeholder="your@email.com" autoComplete="email"
+              className="app-input"
+            />
+          </label>
+          <label className="block space-y-1.5">
+            <span className="text-sm font-medium text-slate-700">{t('login.password')}</span>
+            <input
+              type="password" required value={password} onChange={(e) => setPassword(e.target.value)}
+              autoComplete="current-password"
+              className="app-input"
+            />
+          </label>
+          <button type="submit" disabled={busy} className="app-btn-primary">
+            {busy ? t('login.submitting') : t('login.submit')}
+          </button>
+          {error && (
+            <div className="rounded-lg bg-rose-50 ring-1 ring-rose-200 px-3 py-2 text-sm text-rose-700">
+              {error}
+            </div>
+          )}
+        </form>
+      </div>
     </div>
   );
 }

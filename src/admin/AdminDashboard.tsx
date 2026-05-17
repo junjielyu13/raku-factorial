@@ -14,6 +14,7 @@ interface Row extends EffectivePunch {
 }
 
 interface OfficeCoords { latitude: number; longitude: number }
+interface EmployeeOption { id: string; full_name: string }
 
 const FAR_THRESHOLD_M = 2000;
 
@@ -41,8 +42,6 @@ function distanceToNearestOffice(
 function formatDistance(m: number): string {
   return m < 1000 ? `${Math.round(m)}m` : `${(m / 1000).toFixed(1)}km`;
 }
-
-interface EmployeeOption { id: string; full_name: string }
 
 export function AdminDashboard() {
   const { t } = useTranslation();
@@ -90,49 +89,51 @@ export function AdminDashboard() {
     : rows.filter(r => r.employee_id === filterEmployeeId);
 
   return (
-    <div className="max-w-4xl mx-auto p-6 space-y-4">
-      <header className="flex items-center justify-between gap-3 flex-wrap">
-        <h1 className="text-xl font-semibold">{t('admin.todayTitle')} — {formatDate(new Date().toISOString())}</h1>
-        <div className="flex items-center gap-3 flex-wrap">
-          <nav className="flex gap-3 text-sm text-blue-700 underline">
-            <Link to="/admin/approvals">{t('admin.approvalsLink')}</Link>
-            <Link to="/admin/export">{t('admin.exportLink')}</Link>
-            <Link to="/">{t('admin.employeeViewLink')}</Link>
-          </nav>
+    <div className="min-h-full max-w-4xl mx-auto px-4 py-6 space-y-5">
+      <header className="flex items-start justify-between gap-3 flex-wrap">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900">{t('admin.todayTitle')}</h1>
+          <div className="text-sm text-slate-500">{formatDate(new Date().toISOString())}</div>
+        </div>
+        <div className="flex items-center gap-2 flex-wrap">
+          <Link to="/admin/approvals" className="app-btn-ghost">{t('admin.approvalsLink')}</Link>
+          <Link to="/admin/export" className="app-btn-ghost">{t('admin.exportLink')}</Link>
+          <Link to="/" className="app-btn-ghost">{t('admin.employeeViewLink')}</Link>
           <LanguagePicker />
           <LogoutButton />
         </div>
       </header>
 
-      <label className="flex items-center gap-2 text-sm">
-        <span className="text-gray-600">{t('admin.filterLabel')}:</span>
+      <div className="flex items-center gap-2 text-sm">
+        <label htmlFor="emp-filter" className="text-slate-600">{t('admin.filterLabel')}</label>
         <select
+          id="emp-filter"
           value={filterEmployeeId}
           onChange={e => setFilterEmployeeId(e.target.value)}
-          className="px-2 py-1 border rounded bg-white"
+          className="px-3 py-1.5 rounded-lg bg-white ring-1 ring-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
         >
           <option value="all">{t('admin.filterAll')}</option>
           {employees.map(emp => (
             <option key={emp.id} value={emp.id}>{emp.full_name}</option>
           ))}
         </select>
-      </label>
+      </div>
 
       {visibleRows.length === 0 ? (
-        <div className="text-gray-500">{t('admin.noPunchesToday')}</div>
+        <div className="app-card px-4 py-8 text-center text-slate-500 text-sm">{t('admin.noPunchesToday')}</div>
       ) : (
-        <div className="overflow-x-auto border rounded bg-white">
+        <div className="app-card overflow-x-auto">
           <table className="w-full text-sm">
-            <thead className="bg-gray-50 text-gray-600">
+            <thead className="bg-slate-50 text-slate-500">
               <tr>
-                <th className="text-left px-3 py-2 font-medium">{t('admin.table.time')}</th>
-                <th className="text-left px-3 py-2 font-medium">{t('admin.table.person')}</th>
-                <th className="text-left px-3 py-2 font-medium">{t('admin.table.status')}</th>
-                <th className="text-left px-3 py-2 font-medium">{t('admin.table.info')}</th>
-                <th className="text-center px-3 py-2 font-medium w-10">{t('admin.table.warn')}</th>
+                <th className="text-left px-4 py-2.5 font-medium text-xs uppercase tracking-wider">{t('admin.table.time')}</th>
+                <th className="text-left px-4 py-2.5 font-medium text-xs uppercase tracking-wider">{t('admin.table.person')}</th>
+                <th className="text-left px-4 py-2.5 font-medium text-xs uppercase tracking-wider">{t('admin.table.status')}</th>
+                <th className="text-left px-4 py-2.5 font-medium text-xs uppercase tracking-wider">{t('admin.table.info')}</th>
+                <th className="text-center px-3 py-2.5 font-medium text-xs uppercase tracking-wider w-10">{t('admin.table.warn')}</th>
               </tr>
             </thead>
-            <tbody className="divide-y">
+            <tbody className="divide-y divide-slate-100">
               {visibleRows.map(r => {
                 const lat = r.punch?.latitude;
                 const lng = r.punch?.longitude;
@@ -140,26 +141,31 @@ export function AdminDashboard() {
                 const distM = distanceToNearestOffice(lat, lng, offices);
                 const isFar = distM !== null && distM > FAR_THRESHOLD_M;
                 return (
-                  <tr key={r.id}>
-                    <td className="px-3 py-2 whitespace-nowrap tabular-nums">{formatTime(r.effective_time)}</td>
-                    <td className="px-3 py-2 whitespace-nowrap">{r.employee.full_name}</td>
-                    <td className="px-3 py-2 whitespace-nowrap">{r.kind === 'in' ? t('punch.in') : t('punch.out')}</td>
-                    <td className="px-3 py-2 text-xs text-gray-600">
+                  <tr key={r.id} className="hover:bg-slate-50/50">
+                    <td className="px-4 py-3 whitespace-nowrap font-mono tabular-nums text-slate-900">{formatTime(r.effective_time)}</td>
+                    <td className="px-4 py-3 whitespace-nowrap text-slate-700">{r.employee.full_name}</td>
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium ${r.kind === 'in' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
+                        <span className="leading-none">{r.kind === 'in' ? '▶' : '■'}</span>
+                        {r.kind === 'in' ? t('punch.in') : t('punch.out')}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-xs text-slate-600">
                       {hasGps ? (
                         <a
                           href={`https://www.google.com/maps?q=${lat},${lng}`}
                           target="_blank" rel="noopener noreferrer"
-                          className="text-blue-700 hover:underline"
+                          className="text-emerald-700 hover:underline"
                         >
                           📍 {lat.toFixed(5)}, {lng.toFixed(5)}
                           {typeof r.punch?.accuracy_m === 'number' && ` · ±${Math.round(r.punch.accuracy_m)}m`}
                           {distM !== null && ` · ${t('admin.distanceFromOffice', { distance: formatDistance(distM) })}`}
                         </a>
                       ) : (
-                        <span>{t('admin.noGps')}</span>
+                        <span className="text-slate-400">{t('admin.noGps')}</span>
                       )}
                     </td>
-                    <td className="px-3 py-2 text-center">
+                    <td className="px-3 py-3 text-center">
                       {isFar && <span title={`${Math.round(distM!)}m`}>⚠️</span>}
                     </td>
                   </tr>

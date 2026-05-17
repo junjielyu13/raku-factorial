@@ -10,10 +10,7 @@ export function LogoutButton() {
     nav('/login', { replace: true });
   }
   return (
-    <button
-      onClick={logout}
-      className="px-3 py-1 text-sm border rounded text-gray-700 hover:bg-gray-100"
-    >
+    <button onClick={logout} className="app-btn-ghost">
       {t('auth.logout')}
     </button>
   );

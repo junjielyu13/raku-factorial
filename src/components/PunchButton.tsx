@@ -1,4 +1,3 @@
-// src/components/PunchButton.tsx
 import { useState } from 'react';
 import { punchIn } from '../lib/api';
 import { getPosition } from '../lib/geolocation';
@@ -32,7 +31,6 @@ export function PunchButton({ kind, onSuccess }: Props) {
         ?? (e instanceof Error ? e.message : null)
         ?? 'UNKNOWN';
       const known = t(`punch.errors.${code}`, { code });
-      // If translation key didn't exist, t() returns the path — show the raw code/message so we can diagnose
       if (known.startsWith('punch.errors.')) {
         const status = (e && typeof e === 'object' && 'status' in e ? (e as { status: number }).status : null);
         const message = (e && typeof e === 'object' && 'message' in e ? (e as { message: string }).message : null);
@@ -46,13 +44,31 @@ export function PunchButton({ kind, onSuccess }: Props) {
     }
   }
 
+  const baseColor = kind === 'in'
+    ? 'bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 ring-emerald-700/10'
+    : 'bg-amber-500 hover:bg-amber-600 active:bg-amber-700 ring-amber-700/10';
+
   return (
-    <div className="space-y-2">
-      <button onClick={go} disabled={busy}
-        className={`w-full py-4 text-white font-semibold rounded ${kind === 'in' ? 'bg-green-600 hover:bg-green-700' : 'bg-amber-600 hover:bg-amber-700'} disabled:opacity-50`}>
-        {busy ? <Spinner /> : (kind === 'in' ? t('punch.punchIn') : t('punch.punchOut'))}
+    <div className="space-y-3">
+      <button
+        onClick={go}
+        disabled={busy}
+        className={`w-full h-24 rounded-2xl text-white text-xl font-semibold shadow-md ring-1 transition active:scale-[0.99] disabled:opacity-60 disabled:cursor-not-allowed ${baseColor}`}
+      >
+        {busy ? (
+          <span className="inline-flex items-center gap-2"><Spinner /> …</span>
+        ) : (
+          <span className="inline-flex items-center gap-3">
+            <span className="text-2xl leading-none">{kind === 'in' ? '▶' : '■'}</span>
+            <span>{kind === 'in' ? t('punch.punchIn') : t('punch.punchOut')}</span>
+          </span>
+        )}
       </button>
-      {err && <div className="text-red-700 text-sm">{err}</div>}
+      {err && (
+        <div className="rounded-lg bg-rose-50 ring-1 ring-rose-200 px-3 py-2 text-sm text-rose-700">
+          {err}
+        </div>
+      )}
     </div>
   );
 }

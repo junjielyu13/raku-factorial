@@ -45,6 +45,8 @@ interface Messages {
     myHistory: string;
     submitEdit: string;
     adminLink: string;
+    statusOn: string;       // uses {time}
+    statusOff: string;
   };
   history: {
     title: string;
@@ -137,6 +139,8 @@ export const MESSAGES: Record<Lang, Messages> = {
       myHistory: '我的历史',
       submitEdit: '补卡申请',
       adminLink: '管理',
+      statusOn: '上班中 · 从 {time}',
+      statusOff: '未上班',
     },
     history: { title: '最近 30 天', noRecords: '暂无记录' },
     editRequest: {
@@ -228,6 +232,8 @@ export const MESSAGES: Record<Lang, Messages> = {
       myHistory: 'My history',
       submitEdit: 'Request correction',
       adminLink: 'Admin',
+      statusOn: 'Clocked in since {time}',
+      statusOff: 'Not clocked in',
     },
     history: { title: 'Last 30 days', noRecords: 'No records' },
     editRequest: {
@@ -319,6 +325,8 @@ export const MESSAGES: Record<Lang, Messages> = {
       myHistory: 'Mi historial',
       submitEdit: 'Solicitar corrección',
       adminLink: 'Administración',
+      statusOn: 'Fichado desde las {time}',
+      statusOff: 'Sin fichar',
     },
     history: { title: 'Últimos 30 días', noRecords: 'Sin registros' },
     editRequest: {

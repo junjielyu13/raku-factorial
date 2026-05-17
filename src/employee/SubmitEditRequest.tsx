@@ -32,33 +32,47 @@ export function SubmitEditRequest() {
   }
 
   return (
-    <div className="max-w-md mx-auto p-6 space-y-4">
-      <Link to="/" className="text-blue-700 underline text-sm">{t('common.back')}</Link>
-      <h1 className="text-xl font-semibold">{t('editRequest.title')}</h1>
-      <form onSubmit={submit} className="space-y-3">
-        <label className="block">
-          <span className="text-sm">{t('editRequest.type')}</span>
-          <select value={kind} onChange={e => setKind(e.target.value as 'in' | 'out')}
-            className="w-full px-3 py-2 border rounded">
-            <option value="in">{t('punch.in')}</option>
-            <option value="out">{t('punch.out')}</option>
-          </select>
-        </label>
-        <label className="block">
-          <span className="text-sm">{t('editRequest.actualTime')}</span>
+    <div className="min-h-full max-w-md mx-auto px-4 py-6 space-y-4">
+      <Link to="/" className="inline-block text-sm text-emerald-700 hover:underline">{t('common.back')}</Link>
+      <h1 className="text-2xl font-bold text-slate-900">{t('editRequest.title')}</h1>
+
+      <form onSubmit={submit} className="app-card p-5 space-y-4">
+        <div className="space-y-1.5">
+          <span className="text-sm font-medium text-slate-700">{t('editRequest.type')}</span>
+          <div className="grid grid-cols-2 gap-2 rounded-lg bg-slate-100 p-1">
+            {(['in', 'out'] as const).map(k => (
+              <button
+                type="button"
+                key={k}
+                onClick={() => setKind(k)}
+                className={`py-2 rounded-md text-sm font-medium transition ${kind === k ? 'bg-white shadow text-slate-900' : 'text-slate-600'}`}
+              >
+                {t(`punch.${k}`)}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <label className="block space-y-1.5">
+          <span className="text-sm font-medium text-slate-700">{t('editRequest.actualTime')}</span>
           <input type="datetime-local" required value={datetime} onChange={e => setDatetime(e.target.value)}
-            className="w-full px-3 py-2 border rounded" />
+            className="app-input" />
         </label>
-        <label className="block">
-          <span className="text-sm">{t('editRequest.reason')}</span>
+
+        <label className="block space-y-1.5">
+          <span className="text-sm font-medium text-slate-700">{t('editRequest.reason')}</span>
           <textarea required value={reason} onChange={e => setReason(e.target.value)}
-            rows={3} className="w-full px-3 py-2 border rounded" />
+            rows={3} className="app-input resize-none" />
         </label>
-        <button type="submit" disabled={busy}
-          className="w-full py-2 bg-blue-600 text-white rounded disabled:opacity-50">
+
+        <button type="submit" disabled={busy} className="app-btn-primary">
           {busy ? t('editRequest.submitting') : t('editRequest.submit')}
         </button>
-        {err && <div className="text-red-700 text-sm">{err}</div>}
+        {err && (
+          <div className="rounded-lg bg-rose-50 ring-1 ring-rose-200 px-3 py-2 text-sm text-rose-700">
+            {err}
+          </div>
+        )}
       </form>
     </div>
   );

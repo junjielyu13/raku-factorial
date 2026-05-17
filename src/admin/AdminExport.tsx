@@ -30,19 +30,25 @@ export function AdminExport() {
   }
 
   return (
-    <div className="max-w-md mx-auto p-6 space-y-4">
-      <Link to="/admin" className="text-blue-700 underline text-sm">{t('common.back')}</Link>
-      <h1 className="text-xl font-semibold">{t('admin.export.title')}</h1>
-      <label className="block">
-        <span className="text-sm">{t('admin.export.monthLabel')}</span>
-        <input type="month" value={month} onChange={e => setMonth(e.target.value)}
-          className="w-full px-3 py-2 border rounded" />
-      </label>
-      <button onClick={go} disabled={busy}
-        className="w-full py-2 bg-blue-600 text-white rounded disabled:opacity-50">
-        {busy ? t('admin.export.generating') : t('admin.export.download')}
-      </button>
-      {err && <div className="text-red-700">{err}</div>}
+    <div className="min-h-full max-w-md mx-auto px-4 py-6 space-y-4">
+      <Link to="/admin" className="inline-block text-sm text-emerald-700 hover:underline">{t('common.back')}</Link>
+      <h1 className="text-2xl font-bold text-slate-900">{t('admin.export.title')}</h1>
+
+      <div className="app-card p-5 space-y-4">
+        <label className="block space-y-1.5">
+          <span className="text-sm font-medium text-slate-700">{t('admin.export.monthLabel')}</span>
+          <input type="month" value={month} onChange={e => setMonth(e.target.value)}
+            className="app-input" />
+        </label>
+        <button onClick={go} disabled={busy} className="app-btn-primary">
+          {busy ? t('admin.export.generating') : t('admin.export.download')}
+        </button>
+        {err && (
+          <div className="rounded-lg bg-rose-50 ring-1 ring-rose-200 px-3 py-2 text-sm text-rose-700">
+            {err}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
