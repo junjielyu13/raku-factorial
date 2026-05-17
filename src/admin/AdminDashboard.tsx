@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
-import { formatTime, formatDate, madridTodayRange } from '../lib/time';
+import { formatTime, formatDate, madridDayRange, madridTodayKey } from '../lib/time';
 import { useTranslation } from '../i18n/LanguageContext';
 import { LanguagePicker } from '../components/LanguagePicker';
 import { LogoutButton } from '../components/LogoutButton';
@@ -49,21 +49,7 @@ export function AdminDashboard() {
   const [offices, setOffices] = useState<OfficeCoords[]>([]);
   const [employees, setEmployees] = useState<EmployeeOption[]>([]);
   const [filterEmployeeId, setFilterEmployeeId] = useState<string>('all');
-
-  async function load() {
-    const { start, end } = madridTodayRange();
-    const { data } = await supabase
-      .from('effective_punches')
-      .select(`
-        *,
-        employee:employees!effective_punches_employee_id_fkey(full_name, email),
-        punch:punches!effective_punches_source_punch_id_fkey(latitude, longitude, accuracy_m)
-      `)
-      .gte('effective_time', start)
-      .lt('effective_time', end)
-      .order('effective_time', { ascending: false });
-    setRows((data as unknown as Row[]) ?? []);
-  }
+  const [selectedDate, setSelectedDate] = useState<string>(madridTodayKey());
 
   useEffect(() => {
     supabase.from('office_locations').select('latitude, longitude').eq('active', true)
@@ -74,15 +60,31 @@ export function AdminDashboard() {
 
     supabase.from('employees').select('id, full_name').eq('active', true).order('full_name')
       .then(({ data }) => setEmployees((data as EmployeeOption[]) ?? []));
+  }, []);
 
-    load();
-    const ch = supabase.channel('punches')
+  useEffect(() => {
+    const fetchPunches = async () => {
+      const { start, end } = madridDayRange(selectedDate);
+      const { data } = await supabase
+        .from('effective_punches')
+        .select(`
+          *,
+          employee:employees!effective_punches_employee_id_fkey(full_name, email),
+          punch:punches!effective_punches_source_punch_id_fkey(latitude, longitude, accuracy_m)
+        `)
+        .gte('effective_time', start)
+        .lt('effective_time', end)
+        .order('effective_time', { ascending: false });
+      setRows((data as unknown as Row[]) ?? []);
+    };
+    fetchPunches();
+    const ch = supabase.channel(`punches-${selectedDate}`)
       .on('postgres_changes',
           { event: 'INSERT', schema: 'public', table: 'effective_punches' },
-          () => load())
+          () => fetchPunches())
       .subscribe();
     return () => { supabase.removeChannel(ch); };
-  }, []);
+  }, [selectedDate]);
 
   const visibleRows = filterEmployeeId === 'all'
     ? rows
@@ -93,7 +95,7 @@ export function AdminDashboard() {
       <header className="flex items-start justify-between gap-3 flex-wrap">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">{t('admin.todayTitle')}</h1>
-          <div className="text-sm text-slate-500">{formatDate(new Date().toISOString())}</div>
+          <div className="text-sm text-slate-500">{formatDate(new Date(`${selectedDate}T12:00:00Z`).toISOString())}</div>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           <Link to="/admin/approvals" className="app-btn-ghost">{t('admin.approvalsLink')}</Link>
@@ -104,19 +106,34 @@ export function AdminDashboard() {
         </div>
       </header>
 
-      <div className="flex items-center gap-2 text-sm">
-        <label htmlFor="emp-filter" className="text-slate-600">{t('admin.filterLabel')}</label>
-        <select
-          id="emp-filter"
-          value={filterEmployeeId}
-          onChange={e => setFilterEmployeeId(e.target.value)}
-          className="px-3 py-1.5 rounded-lg bg-white ring-1 ring-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
-        >
-          <option value="all">{t('admin.filterAll')}</option>
-          {employees.map(emp => (
-            <option key={emp.id} value={emp.id}>{emp.full_name}</option>
-          ))}
-        </select>
+      <div className="flex items-center gap-3 flex-wrap text-sm">
+        <label className="flex items-center gap-2">
+          <span className="text-slate-600">{t('admin.dateLabel')}</span>
+          <input
+            type="date"
+            value={selectedDate}
+            max={madridTodayKey()}
+            onChange={e => {
+              const v = e.target.value;
+              if (v && v > madridTodayKey()) return;
+              if (v) setSelectedDate(v);
+            }}
+            className="px-3 py-1.5 rounded-lg bg-white ring-1 ring-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
+          />
+        </label>
+        <label className="flex items-center gap-2">
+          <span className="text-slate-600">{t('admin.filterLabel')}</span>
+          <select
+            value={filterEmployeeId}
+            onChange={e => setFilterEmployeeId(e.target.value)}
+            className="px-3 py-1.5 rounded-lg bg-white ring-1 ring-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
+          >
+            <option value="all">{t('admin.filterAll')}</option>
+            {employees.map(emp => (
+              <option key={emp.id} value={emp.id}>{emp.full_name}</option>
+            ))}
+          </select>
+        </label>
       </div>
 
       {visibleRows.length === 0 ? (

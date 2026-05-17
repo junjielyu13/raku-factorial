@@ -73,6 +73,7 @@ interface Messages {
     exportLink: string;
     employeeViewLink: string;
     noPunchesToday: string;
+    dateLabel: string;
     noGps: string;
     distanceFromOffice: string; // uses {distance}
     filterAll: string;
@@ -170,7 +171,8 @@ export const MESSAGES: Record<Lang, Messages> = {
       },
     },
     admin: {
-      todayTitle: '今日打卡',
+      todayTitle: '打卡记录',
+      dateLabel: '日期',
       approvalsLink: '审批',
       exportLink: '导出',
       employeeViewLink: '员工视图',
@@ -268,7 +270,8 @@ export const MESSAGES: Record<Lang, Messages> = {
       },
     },
     admin: {
-      todayTitle: "Today's punches",
+      todayTitle: 'Punches',
+      dateLabel: 'Date',
       approvalsLink: 'Approvals',
       exportLink: 'Export',
       employeeViewLink: 'Employee view',
@@ -366,7 +369,8 @@ export const MESSAGES: Record<Lang, Messages> = {
       },
     },
     admin: {
-      todayTitle: 'Fichajes de hoy',
+      todayTitle: 'Fichajes',
+      dateLabel: 'Fecha',
       approvalsLink: 'Aprobaciones',
       exportLink: 'Exportar',
       employeeViewLink: 'Vista empleado',
