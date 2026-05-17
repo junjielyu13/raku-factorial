@@ -18,9 +18,22 @@ async function invoke<T>(name: string, body: unknown, method: 'POST' | 'GET' = '
   if (method === 'POST') {
     const { data, error } = await supabase.functions.invoke<T>(name, { body });
     if (error) {
-      const status = (error as unknown as { context?: { status?: number; json?: { error?: string; message?: string } } }).context?.status ?? 500;
-      const json = (error as unknown as { context?: { json?: { error?: string; message?: string } } }).context?.json;
-      throw { status, code: json?.error ?? 'UNKNOWN', message: json?.message ?? error.message } as ApiError;
+      // supabase-js v2: FunctionsHttpError.context is a Response object
+      let code = 'UNKNOWN';
+      let message = error.message;
+      let status = 500;
+      const ctx = (error as unknown as { context?: Response }).context;
+      if (ctx && typeof ctx.json === 'function') {
+        status = ctx.status;
+        try {
+          const parsed = await ctx.clone().json() as { error?: string; message?: string };
+          code = parsed.error ?? code;
+          message = parsed.message ?? message;
+        } catch {
+          // response body wasn't JSON; keep defaults
+        }
+      }
+      throw { status, code, message } as ApiError;
     }
     return data as T;
   } else {
