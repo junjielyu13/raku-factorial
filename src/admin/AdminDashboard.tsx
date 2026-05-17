@@ -5,6 +5,7 @@ import { supabase } from '../lib/supabase';
 import { formatTime, formatDate, madridTodayRange } from '../lib/time';
 import { useTranslation } from '../i18n/LanguageContext';
 import { LanguagePicker } from '../components/LanguagePicker';
+import { LogoutButton } from '../components/LogoutButton';
 import type { EffectivePunch, Employee } from '../lib/types';
 
 interface Row extends EffectivePunch {
@@ -88,6 +89,7 @@ export function AdminDashboard() {
             <Link to="/">{t('admin.employeeViewLink')}</Link>
           </nav>
           <LanguagePicker />
+          <LogoutButton />
         </div>
       </header>
       {rows.length === 0 ? <div className="text-gray-500">{t('admin.noPunchesToday')}</div> :

@@ -30,6 +30,7 @@ interface Messages {
   };
   auth: {
     notRegistered: string;
+    logout: string;
   };
   punch: {
     in: string;
@@ -100,7 +101,7 @@ export const MESSAGES: Record<Lang, Messages> = {
       submitting: '登录中…',
       invalidCredentials: '邮箱或密码不正确。',
     },
-    auth: { notRegistered: '账号未在系统注册，请联系管理员。' },
+    auth: { notRegistered: '账号未在系统注册，请联系管理员。', logout: '退出' },
     punch: {
       in: '上班',
       out: '下班',
@@ -182,7 +183,7 @@ export const MESSAGES: Record<Lang, Messages> = {
       submitting: 'Logging in…',
       invalidCredentials: 'Invalid email or password.',
     },
-    auth: { notRegistered: 'Account not registered. Please contact admin.' },
+    auth: { notRegistered: 'Account not registered. Please contact admin.', logout: 'Log out' },
     punch: {
       in: 'Clock in',
       out: 'Clock out',
@@ -264,7 +265,7 @@ export const MESSAGES: Record<Lang, Messages> = {
       submitting: 'Iniciando…',
       invalidCredentials: 'Correo o contraseña incorrectos.',
     },
-    auth: { notRegistered: 'Cuenta no registrada. Contacta con el administrador.' },
+    auth: { notRegistered: 'Cuenta no registrada. Contacta con el administrador.', logout: 'Cerrar sesión' },
     punch: {
       in: 'Entrada',
       out: 'Salida',

@@ -5,6 +5,7 @@ import { supabase } from '../lib/supabase';
 import { useAuth } from '../auth/useAuth';
 import { PunchButton } from '../components/PunchButton';
 import { LanguagePicker } from '../components/LanguagePicker';
+import { LogoutButton } from '../components/LogoutButton';
 import { formatTime, formatDate, madridTodayRange } from '../lib/time';
 import { useTranslation } from '../i18n/LanguageContext';
 import type { EffectivePunch } from '../lib/types';
@@ -42,7 +43,10 @@ export function EmployeeHome() {
           <div className="text-sm text-gray-600">{profile?.full_name}</div>
           <div className="text-2xl font-semibold">{formatDate(new Date().toISOString())}</div>
         </div>
-        <LanguagePicker />
+        <div className="flex items-center gap-2">
+          <LanguagePicker />
+          <LogoutButton />
+        </div>
       </header>
 
       <PunchButton kind={nextKind} onSuccess={load} />
