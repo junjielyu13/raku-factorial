@@ -26,8 +26,9 @@ async function invoke<T>(name: string, body: unknown, method: 'POST' | 'GET' = '
       if (ctx && typeof ctx.json === 'function') {
         status = ctx.status;
         try {
-          const parsed = await ctx.clone().json() as { error?: string; message?: string };
-          code = parsed.error ?? code;
+          // Supabase platform errors use `{code, message}`; our own Edge Functions use `{error, message}`.
+          const parsed = await ctx.clone().json() as { code?: string; error?: string; message?: string };
+          code = parsed.code ?? parsed.error ?? code;
           message = parsed.message ?? message;
         } catch {
           // response body wasn't JSON; keep defaults
@@ -44,8 +45,8 @@ async function invoke<T>(name: string, body: unknown, method: 'POST' | 'GET' = '
       headers: { 'Authorization': `Bearer ${session?.access_token}` },
     });
     if (!res.ok) {
-      const json = await res.json().catch(() => ({})) as { error?: string; message?: string };
-      throw { status: res.status, code: json.error ?? 'UNKNOWN', message: json.message ?? res.statusText } as ApiError;
+      const json = await res.json().catch(() => ({})) as { code?: string; error?: string; message?: string };
+      throw { status: res.status, code: json.code ?? json.error ?? 'UNKNOWN', message: json.message ?? res.statusText } as ApiError;
     }
     return await res.text() as unknown as T;
   }
