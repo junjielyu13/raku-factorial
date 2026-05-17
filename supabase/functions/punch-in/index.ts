@@ -12,7 +12,6 @@ interface PunchBody {
   accuracy_m: number;
 }
 
-const MIN_INTERVAL_S    = 60;
 const MAX_ACCURACY_M    = 100;
 
 Deno.serve(async (req) => {
@@ -52,23 +51,6 @@ Deno.serve(async (req) => {
     });
     if (!matchingOffice) throw new HttpError(400, 'OUT_OF_GEOFENCE');
 
-    // dedupe: last punch within MIN_INTERVAL_S?
-    const { data: last } = await admin
-      .from('punches')
-      .select('kind, recorded_at')
-      .eq('employee_id', user.id)
-      .order('recorded_at', { ascending: false })
-      .limit(1)
-      .maybeSingle();
-
-    if (last) {
-      const ageMs = Date.now() - new Date(last.recorded_at).getTime();
-      if (ageMs < MIN_INTERVAL_S * 1000) throw new HttpError(409, 'TOO_SOON');
-      if (last.kind === body.kind) throw new HttpError(409, 'INVALID_SEQUENCE');
-    } else if (body.kind === 'out') {
-      throw new HttpError(409, 'INVALID_SEQUENCE');
-    }
-
     const userAgent = req.headers.get('user-agent') ?? null;
     const fwdFor = req.headers.get('x-forwarded-for') ?? null;
     const ip = fwdFor?.split(',')[0]?.trim() ?? null;
@@ -83,7 +65,11 @@ Deno.serve(async (req) => {
       p_user_agent:  userAgent,
       p_ip:          ip,
     });
-    if (rpcErr) throw rpcErr;
+    if (rpcErr) {
+      if (rpcErr.code === 'P0003') throw new HttpError(409, 'TOO_SOON');
+      if (rpcErr.code === 'P0004') throw new HttpError(409, 'INVALID_SEQUENCE');
+      throw rpcErr;
+    }
 
     const row = Array.isArray(created) ? created[0] : created;
     return jsonResponse(200, { punch_id: row.id, recorded_at: row.recorded_at });
