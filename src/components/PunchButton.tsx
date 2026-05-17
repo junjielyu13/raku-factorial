@@ -32,8 +32,15 @@ export function PunchButton({ kind, onSuccess }: Props) {
         ?? (e instanceof Error ? e.message : null)
         ?? 'UNKNOWN';
       const known = t(`punch.errors.${code}`, { code });
-      // If translation key didn't exist, t() returns the path — fall back to generic UNKNOWN message
-      setErr(known.startsWith('punch.errors.') ? t('punch.errors.UNKNOWN', { code }) : known);
+      // If translation key didn't exist, t() returns the path — show the raw code/message so we can diagnose
+      if (known.startsWith('punch.errors.')) {
+        const status = (e && typeof e === 'object' && 'status' in e ? (e as { status: number }).status : null);
+        const message = (e && typeof e === 'object' && 'message' in e ? (e as { message: string }).message : null);
+        const detail = [status, code, message].filter(Boolean).join(' · ');
+        setErr(t('punch.errors.UNKNOWN', { code: detail || 'UNKNOWN' }));
+      } else {
+        setErr(known);
+      }
     } finally {
       setBusy(false);
     }
