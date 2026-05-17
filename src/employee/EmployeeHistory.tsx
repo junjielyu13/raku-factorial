@@ -32,8 +32,8 @@ export function EmployeeHistory() {
         <ul className="divide-y border rounded bg-white">
           {rows.map(r => (
             <li key={r.id} className="px-4 py-2 flex justify-between">
-              <span>{r.kind === 'in' ? t('punch.in') : t('punch.out')}</span>
               <span className="text-gray-700">{formatDateTime(r.effective_time)}</span>
+              <span>{r.kind === 'in' ? t('punch.in') : t('punch.out')}</span>
             </li>
           ))}
         </ul>}
