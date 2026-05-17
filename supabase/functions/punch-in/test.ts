@@ -76,3 +76,66 @@ Deno.test({
     await cleanup();
   },
 });
+
+Deno.test({ name: "punch-in: outside geofence → 400 OUT_OF_GEOFENCE", sanitizeResources: false, sanitizeOps: false,
+  async fn() {
+    await cleanup();
+    const { jwt } = await makeEmployee('outside@test.local');
+    // 1km north of office → outside 200m
+    const res = await callPunchIn(jwt, {
+      kind: 'in', latitude: OFFICE_LAT + 0.01, longitude: OFFICE_LNG, accuracy_m: 20,
+    });
+    assertEquals(res.status, 400);
+    assertEquals((await res.json()).error, 'OUT_OF_GEOFENCE');
+    await cleanup();
+  }});
+
+Deno.test({ name: "punch-in: accuracy > 100m → 400 LOW_ACCURACY", sanitizeResources: false, sanitizeOps: false,
+  async fn() {
+    await cleanup();
+    const { jwt } = await makeEmployee('low-acc@test.local');
+    const res = await callPunchIn(jwt, {
+      kind: 'in', latitude: OFFICE_LAT, longitude: OFFICE_LNG, accuracy_m: 150,
+    });
+    assertEquals(res.status, 400);
+    assertEquals((await res.json()).error, 'LOW_ACCURACY');
+    await cleanup();
+  }});
+
+Deno.test({ name: "punch-in: duplicate within 60s → 409 TOO_SOON", sanitizeResources: false, sanitizeOps: false,
+  async fn() {
+    await cleanup();
+    const { jwt } = await makeEmployee('dup@test.local');
+    const r1 = await callPunchIn(jwt, { kind:'in', latitude: OFFICE_LAT, longitude: OFFICE_LNG, accuracy_m: 20 });
+    assertEquals(r1.status, 200);
+    const r2 = await callPunchIn(jwt, { kind:'out', latitude: OFFICE_LAT, longitude: OFFICE_LNG, accuracy_m: 20 });
+    assertEquals(r2.status, 409);
+    assertEquals((await r2.json()).error, 'TOO_SOON');
+    await cleanup();
+  }});
+
+Deno.test({ name: "punch-in: two consecutive 'in' → 409 INVALID_SEQUENCE", sanitizeResources: false, sanitizeOps: false,
+  async fn() {
+    await cleanup();
+    const { id, jwt } = await makeEmployee('seq@test.local');
+    // Backdate first punch so 60s window doesn't trip
+    await admin.from('punches').insert({
+      employee_id: id, kind: 'in',
+      recorded_at: new Date(Date.now() - 5*60*1000).toISOString(),
+      latitude: OFFICE_LAT, longitude: OFFICE_LNG,
+      office_id: (await admin.from('office_locations').select('id').limit(1).single()).data!.id,
+    });
+    const res = await callPunchIn(jwt, { kind: 'in', latitude: OFFICE_LAT, longitude: OFFICE_LNG, accuracy_m: 20 });
+    assertEquals(res.status, 409);
+    assertEquals((await res.json()).error, 'INVALID_SEQUENCE');
+    await cleanup();
+  }});
+
+Deno.test({ name: "punch-in: missing JWT → 401", sanitizeResources: false, sanitizeOps: false,
+  async fn() {
+    const res = await fetch(FUNC_URL, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ kind:'in', latitude: OFFICE_LAT, longitude: OFFICE_LNG, accuracy_m: 20 }),
+    });
+    assertEquals(res.status, 401);
+  }});
