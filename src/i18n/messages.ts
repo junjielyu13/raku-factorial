@@ -51,6 +51,12 @@ interface Messages {
   history: {
     title: string;
     noRecords: string;
+    filter: {
+      last7: string;
+      last30: string;
+      day: string;
+    };
+    pickDate: string;
   };
   editRequest: {
     title: string;
@@ -142,7 +148,12 @@ export const MESSAGES: Record<Lang, Messages> = {
       statusOn: '上班中 · 从 {time}',
       statusOff: '未上班',
     },
-    history: { title: '最近 30 天', noRecords: '暂无记录' },
+    history: {
+      title: '打卡历史',
+      noRecords: '暂无记录',
+      filter: { last7: '近 7 天', last30: '近 30 天', day: '某一天' },
+      pickDate: '选择日期',
+    },
     editRequest: {
       title: '补卡申请',
       type: '类型',
@@ -235,7 +246,12 @@ export const MESSAGES: Record<Lang, Messages> = {
       statusOn: 'Clocked in since {time}',
       statusOff: 'Not clocked in',
     },
-    history: { title: 'Last 30 days', noRecords: 'No records' },
+    history: {
+      title: 'History',
+      noRecords: 'No records',
+      filter: { last7: 'Last 7 days', last30: 'Last 30 days', day: 'Pick a day' },
+      pickDate: 'Pick date',
+    },
     editRequest: {
       title: 'Punch correction request',
       type: 'Type',
@@ -328,7 +344,12 @@ export const MESSAGES: Record<Lang, Messages> = {
       statusOn: 'Fichado desde las {time}',
       statusOff: 'Sin fichar',
     },
-    history: { title: 'Últimos 30 días', noRecords: 'Sin registros' },
+    history: {
+      title: 'Historial',
+      noRecords: 'Sin registros',
+      filter: { last7: 'Últimos 7 días', last30: 'Últimos 30 días', day: 'Un día' },
+      pickDate: 'Elegir fecha',
+    },
     editRequest: {
       title: 'Solicitud de corrección',
       type: 'Tipo',
