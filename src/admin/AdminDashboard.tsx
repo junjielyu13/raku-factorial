@@ -2,28 +2,16 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
-import { formatTime, formatDate } from '../lib/time';
+import { formatTime, formatDate, madridTodayRange } from '../lib/time';
 import type { EffectivePunch, Employee } from '../lib/types';
 
 interface Row extends EffectivePunch { employee: Pick<Employee, 'full_name' | 'email'> }
-
-function todayWindowMadrid(): { start: string; end: string } {
-  const parts = new Intl.DateTimeFormat('sv-SE', {
-    timeZone: 'Europe/Madrid', year: 'numeric', month: '2-digit', day: '2-digit',
-  }).formatToParts(new Date());
-  const y = parts.find(p => p.type === 'year')!.value;
-  const m = parts.find(p => p.type === 'month')!.value;
-  const d = parts.find(p => p.type === 'day')!.value;
-  const start = new Date(`${y}-${m}-${d}T00:00:00+02:00`);
-  const end   = new Date(start.getTime() + 24*60*60*1000);
-  return { start: start.toISOString(), end: end.toISOString() };
-}
 
 export function AdminDashboard() {
   const [rows, setRows] = useState<Row[]>([]);
 
   async function load() {
-    const { start, end } = todayWindowMadrid();
+    const { start, end } = madridTodayRange();
     const { data } = await supabase
       .from('effective_punches')
       .select('*, employee:employees!effective_punches_employee_id_fkey(full_name, email)')
