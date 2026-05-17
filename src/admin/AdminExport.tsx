@@ -19,7 +19,7 @@ export function AdminExport() {
       const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
       const url  = URL.createObjectURL(blob);
       const a = document.createElement('a');
-      a.href = url; a.download = `punches-${month}.csv`;
+      a.href = url; a.download = `raku-sant-cugat-punches-${month}.csv`;
       document.body.appendChild(a); a.click();
       document.body.removeChild(a); URL.revokeObjectURL(url);
     } catch (e: unknown) {

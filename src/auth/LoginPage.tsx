@@ -6,6 +6,7 @@ import { supabase } from '../lib/supabase';
 import { useAuth } from './useAuth';
 import { useTranslation } from '../i18n/LanguageContext';
 import { LanguagePicker } from '../components/LanguagePicker';
+import { BRAND } from '../components/BrandWatermark';
 
 export function LoginPage() {
   const nav = useNavigate();
@@ -38,11 +39,12 @@ export function LoginPage() {
     <div className="min-h-full flex items-center justify-center px-4 py-10">
       <div className="fixed top-4 right-4 z-10"><LanguagePicker /></div>
       <div className="w-full max-w-sm space-y-6">
-        <div className="text-center space-y-3">
-          <div className="inline-flex items-center justify-center h-14 w-14 rounded-2xl bg-emerald-600 text-white text-2xl font-bold shadow-md">
-            ⏱
+        <div className="text-center space-y-2">
+          <div className="inline-flex items-center justify-center h-16 w-16 rounded-2xl bg-gradient-to-br from-emerald-500 to-emerald-700 text-white text-3xl font-bold shadow-md ring-1 ring-emerald-700/10">
+            R
           </div>
-          <h1 className="text-2xl font-bold text-slate-900">{t('login.title')}</h1>
+          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">{BRAND}</h1>
+          <p className="text-sm text-slate-500">{t('login.title')}</p>
         </div>
         <form onSubmit={submit} className="app-card p-6 space-y-4">
           <label className="block space-y-1.5">
