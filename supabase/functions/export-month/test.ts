@@ -96,3 +96,33 @@ Deno.test({ name: "export-month: employee → only sees own rows", sanitizeResou
     assert(!csv.includes('bob@test.local'), 'employee should not see other employees');
     await cleanup();
   }});
+
+Deno.test({ name: "export-month: totals section shows monthly_hours per employee", sanitizeResources: false, sanitizeOps: false,
+  async fn() {
+    await cleanup();
+    const emp  = await makeUser('totals@test.local', 'employee');
+    const boss = await makeUser('boss-totals@test.local', 'admin');
+    const office = (await admin.from('office_locations').select('id').limit(1).single()).data!.id;
+    const t0 = new Date('2026-05-05T09:00:00Z');
+    const t1 = new Date('2026-05-05T17:00:00Z');
+    const { data: pi } = await admin.from('punches').insert({
+      employee_id: emp.id, kind: 'in', recorded_at: t0.toISOString(),
+      latitude: 40.4, longitude: -3.7, office_id: office,
+    }).select('id').single();
+    const { data: po } = await admin.from('punches').insert({
+      employee_id: emp.id, kind: 'out', recorded_at: t1.toISOString(),
+      latitude: 40.4, longitude: -3.7, office_id: office,
+    }).select('id').single();
+    await admin.from('effective_punches').insert([
+      { employee_id: emp.id, kind: 'in',  effective_time: t0.toISOString(), source_punch_id: pi!.id },
+      { employee_id: emp.id, kind: 'out', effective_time: t1.toISOString(), source_punch_id: po!.id },
+    ]);
+
+    const url = new URL(FUNC_URL);
+    url.searchParams.set('month', '2026-05');
+    const res = await fetch(url, { headers: { 'Authorization': `Bearer ${boss.jwt}` } });
+    const csv = await res.text();
+    assert(csv.includes('worked_total_hours'), 'expected totals header');
+    assert(csv.includes('totals@test.local,8.00'), `expected 8.00h total for emp; got:\n${csv}`);
+    await cleanup();
+  }});
