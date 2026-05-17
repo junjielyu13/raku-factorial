@@ -3,6 +3,8 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { formatTime, formatDate, madridTodayRange } from '../lib/time';
+import { useTranslation } from '../i18n/LanguageContext';
+import { LanguagePicker } from '../components/LanguagePicker';
 import type { EffectivePunch, Employee } from '../lib/types';
 
 interface Row extends EffectivePunch {
@@ -26,7 +28,6 @@ function haversineMeters(lat1: number, lng1: number, lat2: number, lng2: number)
   return 2 * R * Math.asin(Math.sqrt(a));
 }
 
-// Distance to the nearest office in meters. null if no offices or no GPS.
 function distanceToNearestOffice(
   lat: number | null | undefined,
   lng: number | null | undefined,
@@ -36,7 +37,12 @@ function distanceToNearestOffice(
   return Math.min(...offices.map(o => haversineMeters(lat, lng, o.latitude, o.longitude)));
 }
 
+function formatDistance(m: number): string {
+  return m < 1000 ? `${Math.round(m)}m` : `${(m / 1000).toFixed(1)}km`;
+}
+
 export function AdminDashboard() {
+  const { t } = useTranslation();
   const [rows, setRows] = useState<Row[]>([]);
   const [offices, setOffices] = useState<OfficeCoords[]>([]);
 
@@ -56,7 +62,6 @@ export function AdminDashboard() {
   }
 
   useEffect(() => {
-    // Load office reference coords once
     supabase.from('office_locations').select('latitude, longitude').eq('active', true)
       .then(({ data }) => {
         setOffices(((data ?? []) as { latitude: number; longitude: number }[])
@@ -74,15 +79,18 @@ export function AdminDashboard() {
 
   return (
     <div className="max-w-2xl mx-auto p-6 space-y-4">
-      <header className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold">今日打卡 — {formatDate(new Date().toISOString())}</h1>
-        <nav className="flex gap-3 text-sm text-blue-700 underline">
-          <Link to="/admin/approvals">审批</Link>
-          <Link to="/admin/export">导出</Link>
-          <Link to="/">员工视图</Link>
-        </nav>
+      <header className="flex items-center justify-between gap-3">
+        <h1 className="text-xl font-semibold">{t('admin.todayTitle')} — {formatDate(new Date().toISOString())}</h1>
+        <div className="flex items-center gap-3">
+          <nav className="flex gap-3 text-sm text-blue-700 underline">
+            <Link to="/admin/approvals">{t('admin.approvalsLink')}</Link>
+            <Link to="/admin/export">{t('admin.exportLink')}</Link>
+            <Link to="/">{t('admin.employeeViewLink')}</Link>
+          </nav>
+          <LanguagePicker />
+        </div>
       </header>
-      {rows.length === 0 ? <div className="text-gray-500">今天还没人打卡</div> :
+      {rows.length === 0 ? <div className="text-gray-500">{t('admin.noPunchesToday')}</div> :
         <ul className="divide-y border rounded bg-white">
           {rows.map(r => {
             const lat = r.punch?.latitude;
@@ -94,10 +102,10 @@ export function AdminDashboard() {
               <li key={r.id} className="px-4 py-2 flex flex-col gap-1">
                 <div className="flex justify-between items-center">
                   <span className="font-medium flex items-center gap-2">
-                    {isFar && <span title={`距离办公点 ${Math.round(distM!)}m`}>⚠️</span>}
+                    {isFar && <span title={`${Math.round(distM!)}m`}>⚠️</span>}
                     {r.employee.full_name}
                   </span>
-                  <span>{r.kind === 'in' ? '上班' : '下班'} · {formatTime(r.effective_time)}</span>
+                  <span>{r.kind === 'in' ? t('punch.in') : t('punch.out')} · {formatTime(r.effective_time)}</span>
                 </div>
                 <div className="text-xs text-gray-500">
                   {hasGps ? (
@@ -108,10 +116,10 @@ export function AdminDashboard() {
                     >
                       📍 {lat.toFixed(5)}, {lng.toFixed(5)}
                       {typeof r.punch?.accuracy_m === 'number' && ` · ±${Math.round(r.punch.accuracy_m)}m`}
-                      {distM !== null && ` · 距离办公点 ${distM < 1000 ? `${Math.round(distM)}m` : `${(distM / 1000).toFixed(1)}km`}`}
+                      {distM !== null && ` · ${t('admin.distanceFromOffice', { distance: formatDistance(distM) })}`}
                     </a>
                   ) : (
-                    <span>📍 无 GPS 数据</span>
+                    <span>{t('admin.noGps')}</span>
                   )}
                 </div>
               </li>

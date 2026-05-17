@@ -5,11 +5,13 @@ import { supabase } from '../lib/supabase';
 import { approveEdit, rejectEdit } from '../lib/api';
 import type { ApiError } from '../lib/api';
 import { formatDateTime } from '../lib/time';
+import { useTranslation } from '../i18n/LanguageContext';
 import type { PunchEditRequest, Employee } from '../lib/types';
 
 interface Row extends PunchEditRequest { employee: Pick<Employee, 'full_name' | 'email'> }
 
 export function AdminApprovals() {
+  const { t } = useTranslation();
   const [rows, setRows] = useState<Row[]>([]);
   const [busy, setBusy] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
@@ -24,15 +26,15 @@ export function AdminApprovals() {
   }
   useEffect(() => { load(); }, []);
 
-  async function decide(id: string, kind: 'approve' | 'reject', note: string) {
+  async function decide(id: string, kind: 'approve' | 'reject') {
     setBusy(id); setErr(null);
     try {
-      if (kind === 'approve') await approveEdit(id, note);
-      else await rejectEdit(id, note);
+      if (kind === 'approve') await approveEdit(id, '');
+      else await rejectEdit(id, '');
       await load();
     } catch (e: unknown) {
       const apiErr = e as ApiError;
-      setErr(`${kind === 'approve' ? '通过' : '拒绝'}失败：${apiErr.code}`);
+      setErr(t(kind === 'approve' ? 'admin.approvals.approveFailed' : 'admin.approvals.rejectFailed', { code: apiErr.code }));
     } finally {
       setBusy(null);
     }
@@ -40,23 +42,23 @@ export function AdminApprovals() {
 
   return (
     <div className="max-w-2xl mx-auto p-6 space-y-4">
-      <Link to="/admin" className="text-blue-700 underline text-sm">← 返回</Link>
-      <h1 className="text-xl font-semibold">待审批的补卡申请</h1>
+      <Link to="/admin" className="text-blue-700 underline text-sm">{t('common.back')}</Link>
+      <h1 className="text-xl font-semibold">{t('admin.approvals.title')}</h1>
       {err && <div className="text-red-700">{err}</div>}
-      {rows.length === 0 ? <div className="text-gray-500">没有待审批的申请</div> :
+      {rows.length === 0 ? <div className="text-gray-500">{t('admin.approvals.none')}</div> :
         <ul className="space-y-3">
           {rows.map(r => (
             <li key={r.id} className="border rounded bg-white p-4 space-y-2">
               <div className="font-medium">{r.employee.full_name}</div>
               <div className="text-sm text-gray-700">
-                请求：{r.requested_kind === 'in' ? '上班' : '下班'} @ {formatDateTime(r.requested_time)}
+                {t('admin.approvals.requestLabel')}{r.requested_kind === 'in' ? t('punch.in') : t('punch.out')} @ {formatDateTime(r.requested_time)}
               </div>
-              <div className="text-sm">原因：{r.reason}</div>
+              <div className="text-sm">{t('admin.approvals.reasonLabel')}{r.reason}</div>
               <div className="flex gap-2">
-                <button onClick={() => decide(r.id, 'approve', '')} disabled={busy === r.id}
-                  className="px-3 py-1 bg-green-600 text-white rounded disabled:opacity-50">通过</button>
-                <button onClick={() => decide(r.id, 'reject', '')} disabled={busy === r.id}
-                  className="px-3 py-1 bg-red-600 text-white rounded disabled:opacity-50">拒绝</button>
+                <button onClick={() => decide(r.id, 'approve')} disabled={busy === r.id}
+                  className="px-3 py-1 bg-green-600 text-white rounded disabled:opacity-50">{t('admin.approvals.approve')}</button>
+                <button onClick={() => decide(r.id, 'reject')} disabled={busy === r.id}
+                  className="px-3 py-1 bg-red-600 text-white rounded disabled:opacity-50">{t('admin.approvals.reject')}</button>
               </div>
             </li>
           ))}

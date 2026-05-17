@@ -4,16 +4,18 @@ import type { FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { useAuth } from './useAuth';
+import { useTranslation } from '../i18n/LanguageContext';
+import { LanguagePicker } from '../components/LanguagePicker';
 
 export function LoginPage() {
   const nav = useNavigate();
   const { session } = useAuth();
+  const { t } = useTranslation();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
 
-  // If already logged in (e.g., navigated to /login by accident), bounce to home.
   useEffect(() => {
     if (session) nav('/', { replace: true });
   }, [session, nav]);
@@ -24,7 +26,7 @@ export function LoginPage() {
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) {
       setError(error.message === 'Invalid login credentials'
-        ? '邮箱或密码不正确。'
+        ? t('login.invalidCredentials')
         : error.message);
       setBusy(false);
     } else {
@@ -34,10 +36,11 @@ export function LoginPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="fixed top-4 right-4"><LanguagePicker /></div>
       <form onSubmit={submit} className="bg-white p-8 rounded shadow w-full max-w-sm space-y-4">
-        <h1 className="text-xl font-semibold">登录</h1>
+        <h1 className="text-xl font-semibold">{t('login.title')}</h1>
         <label className="block">
-          <span className="text-sm text-gray-700">邮箱</span>
+          <span className="text-sm text-gray-700">{t('login.email')}</span>
           <input
             type="email" required value={email} onChange={(e) => setEmail(e.target.value)}
             placeholder="your@email.com" autoComplete="email"
@@ -45,7 +48,7 @@ export function LoginPage() {
           />
         </label>
         <label className="block">
-          <span className="text-sm text-gray-700">密码</span>
+          <span className="text-sm text-gray-700">{t('login.password')}</span>
           <input
             type="password" required value={password} onChange={(e) => setPassword(e.target.value)}
             autoComplete="current-password"
@@ -56,7 +59,7 @@ export function LoginPage() {
           type="submit" disabled={busy}
           className="w-full py-2 bg-blue-600 text-white rounded disabled:opacity-50"
         >
-          {busy ? '登录中…' : '登录'}
+          {busy ? t('login.submitting') : t('login.submit')}
         </button>
         {error && <p className="text-red-700 text-sm">{error}</p>}
       </form>
