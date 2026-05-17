@@ -1,7 +1,6 @@
 // src/router.tsx
 import { createBrowserRouter, Navigate } from 'react-router-dom';
 import { LoginPage } from './auth/LoginPage';
-import { AuthCallback } from './auth/AuthCallback';
 import { RequireAuth } from './auth/RequireAuth';
 import { EmployeeHome } from './employee/EmployeeHome';
 import { EmployeeHistory } from './employee/EmployeeHistory';
@@ -12,7 +11,6 @@ import { AdminExport } from './admin/AdminExport';
 
 export const router = createBrowserRouter([
   { path: '/login',          element: <LoginPage /> },
-  { path: '/auth/callback',  element: <AuthCallback /> },
   { path: '/',               element: <RequireAuth><EmployeeHome /></RequireAuth> },
   { path: '/history',        element: <RequireAuth><EmployeeHistory /></RequireAuth> },
   { path: '/submit-edit',    element: <RequireAuth><SubmitEditRequest /></RequireAuth> },

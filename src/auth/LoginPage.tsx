@@ -5,37 +5,51 @@ import { supabase } from '../lib/supabase';
 
 export function LoginPage() {
   const [email, setEmail] = useState('');
-  const [status, setStatus] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle');
+  const [password, setPassword] = useState('');
+  const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
 
   async function submit(e: FormEvent) {
     e.preventDefault();
-    setStatus('sending'); setError('');
-    const { error } = await supabase.auth.signInWithOtp({
-      email,
-      options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
-    });
-    if (error) { setStatus('error'); setError(error.message); }
-    else setStatus('sent');
+    setBusy(true); setError('');
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) {
+      setError(error.message === 'Invalid login credentials'
+        ? '邮箱或密码不正确。'
+        : error.message);
+      setBusy(false);
+    } else {
+      window.location.replace('/');
+    }
   }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50">
       <form onSubmit={submit} className="bg-white p-8 rounded shadow w-full max-w-sm space-y-4">
         <h1 className="text-xl font-semibold">登录</h1>
-        <input
-          type="email" required value={email} onChange={(e) => setEmail(e.target.value)}
-          placeholder="your@email.com"
-          className="w-full px-3 py-2 border rounded"
-        />
+        <label className="block">
+          <span className="text-sm text-gray-700">邮箱</span>
+          <input
+            type="email" required value={email} onChange={(e) => setEmail(e.target.value)}
+            placeholder="your@email.com" autoComplete="email"
+            className="w-full px-3 py-2 border rounded mt-1"
+          />
+        </label>
+        <label className="block">
+          <span className="text-sm text-gray-700">密码</span>
+          <input
+            type="password" required value={password} onChange={(e) => setPassword(e.target.value)}
+            autoComplete="current-password"
+            className="w-full px-3 py-2 border rounded mt-1"
+          />
+        </label>
         <button
-          type="submit" disabled={status === 'sending'}
+          type="submit" disabled={busy}
           className="w-full py-2 bg-blue-600 text-white rounded disabled:opacity-50"
         >
-          {status === 'sending' ? '发送中…' : '发送魔法链接'}
+          {busy ? '登录中…' : '登录'}
         </button>
-        {status === 'sent' && <p className="text-green-700">查收邮箱并点击链接登录。</p>}
-        {status === 'error' && <p className="text-red-700">{error}</p>}
+        {error && <p className="text-red-700 text-sm">{error}</p>}
       </form>
     </div>
   );
