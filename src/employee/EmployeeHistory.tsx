@@ -71,7 +71,11 @@ export function EmployeeHistory() {
               type="date"
               value={selectedDate}
               max={madridTodayKey()}
-              onChange={e => setSelectedDate(e.target.value)}
+              onChange={e => {
+                const v = e.target.value;
+                if (v && v > madridTodayKey()) return;
+                setSelectedDate(v);
+              }}
               className="app-input"
             />
           </label>
