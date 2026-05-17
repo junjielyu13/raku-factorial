@@ -6,8 +6,8 @@ import {
 
 interface PunchBody {
   kind: 'in' | 'out';
-  latitude?: number | null;
-  longitude?: number | null;
+  latitude: number;
+  longitude: number;
   accuracy_m?: number | null;
 }
 
@@ -24,10 +24,10 @@ Deno.serve(async (req) => {
       throw new HttpError(400, 'BAD_KIND');
     }
 
-    // GPS is recorded for audit but not enforced. Coordinates may be null
-    // (user denied permission, no GPS hardware, indoor failure, etc).
-    const lat = typeof body.latitude  === 'number' ? body.latitude  : null;
-    const lng = typeof body.longitude === 'number' ? body.longitude : null;
+    // GPS is required for audit but no geofence enforcement.
+    if (typeof body.latitude !== 'number' || typeof body.longitude !== 'number') {
+      throw new HttpError(400, 'GPS_REQUIRED');
+    }
     const acc = typeof body.accuracy_m === 'number' ? body.accuracy_m : null;
 
     const admin = adminClient();
@@ -38,8 +38,8 @@ Deno.serve(async (req) => {
     const { data: created, error: rpcErr } = await admin.rpc('create_punch', {
       p_employee_id: user.id,
       p_kind:        body.kind,
-      p_lat:         lat,
-      p_lng:         lng,
+      p_lat:         body.latitude,
+      p_lng:         body.longitude,
       p_accuracy:    acc,
       p_office_id:   null,
       p_user_agent:  userAgent,

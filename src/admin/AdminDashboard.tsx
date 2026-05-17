@@ -10,8 +10,35 @@ interface Row extends EffectivePunch {
   punch: { latitude: number | null; longitude: number | null; accuracy_m: number | null } | null;
 }
 
+interface OfficeCoords { latitude: number; longitude: number }
+
+const FAR_THRESHOLD_M = 2000;
+
+function haversineMeters(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const R = 6_371_000;
+  const toRad = (d: number) => (d * Math.PI) / 180;
+  const dLat = toRad(lat2 - lat1);
+  const dLng = toRad(lng2 - lng1);
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
+    Math.sin(dLng / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(a));
+}
+
+// Distance to the nearest office in meters. null if no offices or no GPS.
+function distanceToNearestOffice(
+  lat: number | null | undefined,
+  lng: number | null | undefined,
+  offices: OfficeCoords[],
+): number | null {
+  if (typeof lat !== 'number' || typeof lng !== 'number' || offices.length === 0) return null;
+  return Math.min(...offices.map(o => haversineMeters(lat, lng, o.latitude, o.longitude)));
+}
+
 export function AdminDashboard() {
   const [rows, setRows] = useState<Row[]>([]);
+  const [offices, setOffices] = useState<OfficeCoords[]>([]);
 
   async function load() {
     const { start, end } = madridTodayRange();
@@ -29,6 +56,13 @@ export function AdminDashboard() {
   }
 
   useEffect(() => {
+    // Load office reference coords once
+    supabase.from('office_locations').select('latitude, longitude').eq('active', true)
+      .then(({ data }) => {
+        setOffices(((data ?? []) as { latitude: number; longitude: number }[])
+          .map(o => ({ latitude: Number(o.latitude), longitude: Number(o.longitude) })));
+      });
+
     load();
     const ch = supabase.channel('punches')
       .on('postgres_changes',
@@ -54,10 +88,15 @@ export function AdminDashboard() {
             const lat = r.punch?.latitude;
             const lng = r.punch?.longitude;
             const hasGps = typeof lat === 'number' && typeof lng === 'number';
+            const distM = distanceToNearestOffice(lat, lng, offices);
+            const isFar = distM !== null && distM > FAR_THRESHOLD_M;
             return (
               <li key={r.id} className="px-4 py-2 flex flex-col gap-1">
-                <div className="flex justify-between">
-                  <span className="font-medium">{r.employee.full_name}</span>
+                <div className="flex justify-between items-center">
+                  <span className="font-medium flex items-center gap-2">
+                    {isFar && <span title={`距离办公点 ${Math.round(distM!)}m`}>⚠️</span>}
+                    {r.employee.full_name}
+                  </span>
                   <span>{r.kind === 'in' ? '上班' : '下班'} · {formatTime(r.effective_time)}</span>
                 </div>
                 <div className="text-xs text-gray-500">
@@ -69,6 +108,7 @@ export function AdminDashboard() {
                     >
                       📍 {lat.toFixed(5)}, {lng.toFixed(5)}
                       {typeof r.punch?.accuracy_m === 'number' && ` · ±${Math.round(r.punch.accuracy_m)}m`}
+                      {distM !== null && ` · 距离办公点 ${distM < 1000 ? `${Math.round(distM)}m` : `${(distM / 1000).toFixed(1)}km`}`}
                     </a>
                   ) : (
                     <span>📍 无 GPS 数据</span>

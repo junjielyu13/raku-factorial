@@ -3,8 +3,8 @@ import { supabase } from './supabase';
 
 interface PunchInArgs {
   kind: 'in' | 'out';
-  latitude?: number | null;
-  longitude?: number | null;
+  latitude: number;
+  longitude: number;
   accuracy_m?: number | null;
 }
 

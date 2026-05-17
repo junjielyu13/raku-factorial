@@ -91,18 +91,14 @@ Deno.test({
 });
 
 Deno.test({
-  name: "punch-in: no GPS (coords omitted) → 200, null coords stored",
+  name: "punch-in: GPS coords omitted → 400 GPS_REQUIRED",
   sanitizeResources: false, sanitizeOps: false,
   async fn() {
     await cleanup();
-    const { id, jwt } = await makeEmployee('no-gps@test.local');
+    const { jwt } = await makeEmployee('no-gps@test.local');
     const res = await callPunchIn(jwt, { kind: 'in' });
-    assertEquals(res.status, 200);
-    const { data: punches } = await admin.from('punches').select('*').eq('employee_id', id);
-    assertEquals(punches?.length, 1);
-    assertEquals(punches![0].latitude, null);
-    assertEquals(punches![0].longitude, null);
-    assertEquals(punches![0].office_id, null);
+    assertEquals(res.status, 400);
+    assertEquals((await res.json()).error, 'GPS_REQUIRED');
     await cleanup();
   },
 });
@@ -111,9 +107,9 @@ Deno.test({ name: "punch-in: duplicate within 60s → 409 TOO_SOON", sanitizeRes
   async fn() {
     await cleanup();
     const { jwt } = await makeEmployee('dup@test.local');
-    const r1 = await callPunchIn(jwt, { kind:'in' });
+    const r1 = await callPunchIn(jwt, { kind:'in', latitude: 41.478107, longitude: 2.084087 });
     assertEquals(r1.status, 200);
-    const r2 = await callPunchIn(jwt, { kind:'out' });
+    const r2 = await callPunchIn(jwt, { kind:'out', latitude: 41.478107, longitude: 2.084087 });
     assertEquals(r2.status, 409);
     assertEquals((await r2.json()).error, 'TOO_SOON');
     await cleanup();
@@ -127,8 +123,9 @@ Deno.test({ name: "punch-in: two consecutive 'in' → 409 INVALID_SEQUENCE", san
     await admin.from('punches').insert({
       employee_id: id, kind: 'in',
       recorded_at: new Date(Date.now() - 5*60*1000).toISOString(),
+      latitude: 41.478107, longitude: 2.084087,
     });
-    const res = await callPunchIn(jwt, { kind: 'in' });
+    const res = await callPunchIn(jwt, { kind: 'in', latitude: 41.478107, longitude: 2.084087 });
     assertEquals(res.status, 409);
     assertEquals((await res.json()).error, 'INVALID_SEQUENCE');
     await cleanup();
@@ -138,7 +135,7 @@ Deno.test({ name: "punch-in: missing JWT → 401", sanitizeResources: false, san
   async fn() {
     const res = await fetch(FUNC_URL, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ kind:'in' }),
+      body: JSON.stringify({ kind:'in', latitude: 41.478107, longitude: 2.084087 }),
     });
     assertEquals(res.status, 401);
   }});
