@@ -67,6 +67,15 @@ interface Messages {
     noPunchesToday: string;
     noGps: string;
     distanceFromOffice: string; // uses {distance}
+    filterAll: string;
+    filterLabel: string;
+    table: {
+      time: string;
+      person: string;
+      status: string;
+      info: string;
+      warn: string;
+    };
     approvals: {
       title: string;
       none: string;
@@ -153,6 +162,15 @@ export const MESSAGES: Record<Lang, Messages> = {
       noPunchesToday: '今天还没人打卡',
       noGps: '📍 无 GPS 数据',
       distanceFromOffice: '距离办公点 {distance}',
+      filterAll: '全部员工',
+      filterLabel: '员工筛选',
+      table: {
+        time: '时间',
+        person: '员工',
+        status: '状态',
+        info: '其他信息',
+        warn: '⚠️',
+      },
       approvals: {
         title: '待审批的补卡申请',
         none: '没有待审批的申请',
@@ -235,6 +253,15 @@ export const MESSAGES: Record<Lang, Messages> = {
       noPunchesToday: 'No punches today',
       noGps: '📍 No GPS data',
       distanceFromOffice: '{distance} from office',
+      filterAll: 'All employees',
+      filterLabel: 'Filter by employee',
+      table: {
+        time: 'Time',
+        person: 'Employee',
+        status: 'Status',
+        info: 'Details',
+        warn: '⚠️',
+      },
       approvals: {
         title: 'Pending correction requests',
         none: 'No pending requests',
@@ -317,6 +344,15 @@ export const MESSAGES: Record<Lang, Messages> = {
       noPunchesToday: 'Sin fichajes hoy',
       noGps: '📍 Sin datos GPS',
       distanceFromOffice: '{distance} de la oficina',
+      filterAll: 'Todos los empleados',
+      filterLabel: 'Filtrar por empleado',
+      table: {
+        time: 'Hora',
+        person: 'Empleado',
+        status: 'Estado',
+        info: 'Detalles',
+        warn: '⚠️',
+      },
       approvals: {
         title: 'Solicitudes pendientes',
         none: 'No hay solicitudes pendientes',
