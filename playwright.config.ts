@@ -5,6 +5,7 @@ export default defineConfig({
   testDir: './e2e',
   timeout: 30_000,
   fullyParallel: false,        // tests share a DB; run serially
+  workers: 1,                  // one worker so spec files don't race each other
   retries: 0,
   use: {
     baseURL: 'http://localhost:5173',
