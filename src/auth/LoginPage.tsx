@@ -1,13 +1,22 @@
 // src/auth/LoginPage.tsx
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
+import { useAuth } from './useAuth';
 
 export function LoginPage() {
+  const nav = useNavigate();
+  const { session } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+
+  // If already logged in (e.g., navigated to /login by accident), bounce to home.
+  useEffect(() => {
+    if (session) nav('/', { replace: true });
+  }, [session, nav]);
 
   async function submit(e: FormEvent) {
     e.preventDefault();
@@ -19,7 +28,7 @@ export function LoginPage() {
         : error.message);
       setBusy(false);
     } else {
-      window.location.replace('/');
+      nav('/', { replace: true });
     }
   }
 
