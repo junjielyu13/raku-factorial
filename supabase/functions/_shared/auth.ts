@@ -57,7 +57,7 @@ export function jsonResponse(status: number, body: unknown): Response {
     headers: {
       'Content-Type': 'application/json',
       'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Headers': 'authorization, content-type',
+      'Access-Control-Allow-Headers': 'authorization, content-type, x-client-info, apikey',
     },
   });
 }
@@ -68,7 +68,7 @@ export function handleCors(req: Request): Response | null {
       headers: {
         'Access-Control-Allow-Origin': '*',
         'Access-Control-Allow-Methods': 'POST, OPTIONS',
-        'Access-Control-Allow-Headers': 'authorization, content-type',
+        'Access-Control-Allow-Headers': 'authorization, content-type, x-client-info, apikey',
       },
     });
   }
