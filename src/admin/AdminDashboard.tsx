@@ -1,11 +1,13 @@
 // src/admin/AdminDashboard.tsx
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { formatTime, formatDate, madridDayRange, madridTodayKey } from '../lib/time';
 import { useTranslation } from '../i18n/LanguageContext';
 import { LanguagePicker } from '../components/LanguagePicker';
 import { LogoutButton } from '../components/LogoutButton';
+import { PunchCorrectionModal } from '../components/PunchCorrectionModal';
+import type { CorrectionTarget } from '../components/PunchCorrectionModal';
 import type { EffectivePunch, Employee } from '../lib/types';
 
 interface Row extends EffectivePunch {
@@ -15,6 +17,10 @@ interface Row extends EffectivePunch {
 
 interface OfficeCoords { latitude: number; longitude: number }
 interface EmployeeOption { id: string; full_name: string }
+
+type ModalState =
+  | { mode: 'add' }
+  | { mode: 'modify' | 'delete'; target: CorrectionTarget };
 
 const FAR_THRESHOLD_M = 2000;
 
@@ -50,6 +56,7 @@ export function AdminDashboard() {
   const [employees, setEmployees] = useState<EmployeeOption[]>([]);
   const [filterEmployeeId, setFilterEmployeeId] = useState<string>('all');
   const [selectedDate, setSelectedDate] = useState<string>(madridTodayKey());
+  const [modal, setModal] = useState<ModalState | null>(null);
 
   useEffect(() => {
     supabase.from('office_locations').select('latitude, longitude').eq('active', true)
@@ -62,21 +69,23 @@ export function AdminDashboard() {
       .then(({ data }) => setEmployees((data as EmployeeOption[]) ?? []));
   }, []);
 
+  const fetchPunches = useCallback(async () => {
+    const { start, end } = madridDayRange(selectedDate);
+    const { data } = await supabase
+      .from('effective_punches')
+      .select(`
+        *,
+        employee:employees!effective_punches_employee_id_fkey(full_name, email),
+        punch:punches!effective_punches_source_punch_id_fkey(latitude, longitude, accuracy_m)
+      `)
+      .is('superseded_at', null)
+      .gte('effective_time', start)
+      .lt('effective_time', end)
+      .order('effective_time', { ascending: false });
+    setRows((data as unknown as Row[]) ?? []);
+  }, [selectedDate]);
+
   useEffect(() => {
-    const fetchPunches = async () => {
-      const { start, end } = madridDayRange(selectedDate);
-      const { data } = await supabase
-        .from('effective_punches')
-        .select(`
-          *,
-          employee:employees!effective_punches_employee_id_fkey(full_name, email),
-          punch:punches!effective_punches_source_punch_id_fkey(latitude, longitude, accuracy_m)
-        `)
-        .gte('effective_time', start)
-        .lt('effective_time', end)
-        .order('effective_time', { ascending: false });
-      setRows((data as unknown as Row[]) ?? []);
-    };
     fetchPunches();
     const ch = supabase.channel(`punches-${selectedDate}`)
       .on('postgres_changes',
@@ -84,7 +93,7 @@ export function AdminDashboard() {
           () => fetchPunches())
       .subscribe();
     return () => { supabase.removeChannel(ch); };
-  }, [selectedDate]);
+  }, [selectedDate, fetchPunches]);
 
   const visibleRows = filterEmployeeId === 'all'
     ? rows
@@ -134,6 +143,9 @@ export function AdminDashboard() {
             ))}
           </select>
         </label>
+        <button type="button" onClick={() => setModal({ mode: 'add' })} className="app-btn-ghost">
+          {t('admin.correct.addPunch')}
+        </button>
       </div>
 
       {visibleRows.length === 0 ? (
@@ -148,6 +160,7 @@ export function AdminDashboard() {
                 <th className="text-left px-4 py-2.5 font-medium text-xs uppercase tracking-wider">{t('admin.table.status')}</th>
                 <th className="text-left px-4 py-2.5 font-medium text-xs uppercase tracking-wider">{t('admin.table.info')}</th>
                 <th className="text-center px-3 py-2.5 font-medium text-xs uppercase tracking-wider w-10">{t('admin.table.warn')}</th>
+                <th className="text-right px-3 py-2.5 font-medium text-xs uppercase tracking-wider">{t('admin.table.actions')}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -157,9 +170,22 @@ export function AdminDashboard() {
                 const hasGps = typeof lat === 'number' && typeof lng === 'number';
                 const distM = distanceToNearestOffice(lat, lng, offices);
                 const isFar = distM !== null && distM > FAR_THRESHOLD_M;
+                const target: CorrectionTarget = {
+                  effective_id: r.id,
+                  employee_name: r.employee.full_name,
+                  kind: r.kind,
+                  effective_time: r.effective_time,
+                };
                 return (
                   <tr key={r.id} className="hover:bg-slate-50/50">
-                    <td className="px-4 py-3 whitespace-nowrap font-mono tabular-nums text-slate-900">{formatTime(r.effective_time)}</td>
+                    <td className="px-4 py-3 whitespace-nowrap font-mono tabular-nums text-slate-900">
+                      {formatTime(r.effective_time)}
+                      {r.source_request_id && (
+                        <span className="ml-1.5 text-xs font-sans text-emerald-600" title={t('admin.correct.correctedBadge')}>
+                          ✎
+                        </span>
+                      )}
+                    </td>
                     <td className="px-4 py-3 whitespace-nowrap text-slate-700">{r.employee.full_name}</td>
                     <td className="px-4 py-3 whitespace-nowrap">
                       <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium ${r.kind === 'in' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
@@ -185,12 +211,38 @@ export function AdminDashboard() {
                     <td className="px-3 py-3 text-center">
                       {isFar && <span title={`${Math.round(distM!)}m`}>⚠️</span>}
                     </td>
+                    <td className="px-3 py-3 whitespace-nowrap text-right">
+                      <button
+                        type="button"
+                        onClick={() => setModal({ mode: 'modify', target })}
+                        className="text-xs text-emerald-700 hover:underline mr-3"
+                      >
+                        {t('admin.correct.modify')}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setModal({ mode: 'delete', target })}
+                        className="text-xs text-rose-700 hover:underline"
+                      >
+                        {t('admin.correct.delete')}
+                      </button>
+                    </td>
                   </tr>
                 );
               })}
             </tbody>
           </table>
         </div>
+      )}
+
+      {modal && (
+        <PunchCorrectionModal
+          mode={modal.mode}
+          target={modal.mode === 'add' ? undefined : modal.target}
+          employees={employees}
+          onClose={() => setModal(null)}
+          onDone={() => { setModal(null); fetchPunches(); }}
+        />
       )}
     </div>
   );
