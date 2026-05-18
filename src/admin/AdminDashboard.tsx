@@ -491,9 +491,9 @@ export function AdminDashboard() {
                     </header>
                     <ul className="divide-y divide-slate-100">
                       {daysShifts.map((s, idx) => {
-                        const locationAnchor = s.in ?? s.out!;
+                        const rowKeyAnchor = s.in ?? s.out!;
                         return (
-                          <li key={`${locationAnchor.id}-${idx}`} className="px-4 py-3 flex items-center gap-3 flex-wrap">
+                          <li key={`${rowKeyAnchor.id}-${idx}`} className="px-4 py-3 flex items-center gap-3 flex-wrap">
                             <div className="flex items-center gap-2">
                               {s.in ? (
                                 <div className="flex items-center gap-1">
@@ -531,8 +531,9 @@ export function AdminDashboard() {
                                 </span>
                               )}
                             </div>
-                            <div className="ml-auto">
-                              <LocationPill p={locationAnchor} offices={offices} t={t} />
+                            <div className="ml-auto flex items-center gap-2 flex-wrap justify-end">
+                              {s.in && <LocationPill p={s.in} offices={offices} t={t} />}
+                              {s.out && <LocationPill p={s.out} offices={offices} t={t} />}
                             </div>
                           </li>
                         );
