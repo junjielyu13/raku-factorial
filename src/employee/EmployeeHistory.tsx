@@ -21,7 +21,9 @@ export function EmployeeHistory() {
     if (!profile) return;
     setLoading(true);
 
-    let q = supabase.from('effective_punches').select('*').eq('employee_id', profile.id);
+    let q = supabase.from('effective_punches').select('*')
+      .eq('employee_id', profile.id)
+      .is('superseded_at', null);
 
     if (filter === 'day') {
       const { start, end } = madridDayRange(selectedDate);

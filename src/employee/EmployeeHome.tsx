@@ -30,6 +30,7 @@ export function EmployeeHome() {
       .from('effective_punches')
       .select('*')
       .eq('employee_id', profile.id)
+      .is('superseded_at', null)
       .gte('effective_time', start)
       .lt('effective_time', end)
       .order('effective_time', { ascending: true });

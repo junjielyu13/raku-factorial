@@ -64,6 +64,7 @@ Deno.serve(async (req) => {
     let query = admin
       .from('effective_punches')
       .select('employee_id, kind, effective_time, employees(email, full_name)')
+      .is('superseded_at', null)
       .gte('effective_time', start.toISOString())
       .lt('effective_time', end.toISOString())
       .order('effective_time', { ascending: true });
