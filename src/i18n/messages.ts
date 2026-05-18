@@ -60,6 +60,12 @@ interface Messages {
     pickDate: string;
     total: string;       // uses {h}, {m}
     rangeTotal: string;  // uses {h}, {m}
+    pagination: {
+      perPage: string;
+      prev: string;
+      next: string;
+      pageOf: string;    // uses {page}, {total}
+    };
   };
   editRequest: {
     title: string;
@@ -193,6 +199,12 @@ export const MESSAGES: Record<Lang, Messages> = {
       pickDate: '选择日期',
       total: '共 {h} 小时 {m} 分',
       rangeTotal: '合计 {h} 小时 {m} 分',
+      pagination: {
+        perPage: '每页',
+        prev: '上一页',
+        next: '下一页',
+        pageOf: '第 {page} / {total} 页',
+      },
     },
     editRequest: {
       title: '补卡申请',
@@ -336,6 +348,12 @@ export const MESSAGES: Record<Lang, Messages> = {
       pickDate: 'Pick date',
       total: 'Total {h}h {m}m',
       rangeTotal: 'Total {h}h {m}m',
+      pagination: {
+        perPage: 'Per page',
+        prev: 'Previous',
+        next: 'Next',
+        pageOf: 'Page {page} of {total}',
+      },
     },
     editRequest: {
       title: 'Punch correction request',
@@ -479,6 +497,12 @@ export const MESSAGES: Record<Lang, Messages> = {
       pickDate: 'Elegir fecha',
       total: 'Total {h} h {m} min',
       rangeTotal: 'Total {h} h {m} min',
+      pagination: {
+        perPage: 'Por página',
+        prev: 'Anterior',
+        next: 'Siguiente',
+        pageOf: 'Página {page} de {total}',
+      },
     },
     editRequest: {
       title: 'Solicitud de corrección',

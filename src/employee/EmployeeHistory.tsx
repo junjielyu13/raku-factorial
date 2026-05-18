@@ -10,6 +10,9 @@ import type { EffectivePunch } from '../lib/types';
 
 type Filter = 'last7' | 'last30' | 'day';
 
+const PAGE_SIZES = [10, 50, 100] as const;
+type PageSize = typeof PAGE_SIZES[number];
+
 export function EmployeeHistory() {
   const { profile } = useAuth();
   const { t } = useTranslation();
@@ -17,6 +20,8 @@ export function EmployeeHistory() {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<Filter>('last30');
   const [selectedDate, setSelectedDate] = useState<string>(madridTodayKey());
+  const [pageSize, setPageSize] = useState<PageSize>(10);
+  const [page, setPage] = useState(0);
 
   useEffect(() => {
     if (!profile) return;
@@ -39,21 +44,42 @@ export function EmployeeHistory() {
       .then(({ data }) => { setRows((data as EffectivePunch[]) ?? []); setLoading(false); });
   }, [profile, filter, selectedDate]);
 
-  const groups = useMemo(() => {
-    const m = new Map<string, EffectivePunch[]>();
-    for (const r of rows) {
-      const key = madridDayKeyOf(r.effective_time);
-      if (!m.has(key)) m.set(key, []);
-      m.get(key)!.push(r);
-    }
-    return Array.from(m.entries());
-  }, [rows]);
+  // Reset to first page when filter, date, or page size changes.
+  useEffect(() => { setPage(0); }, [filter, selectedDate, pageSize]);
 
   const todayKey = madridTodayKey();
-  const groupTotalsMs = groups.map(
-    ([dayKey, items]) => workedMsForDay(items, dayKey === todayKey ? Date.now() : null),
-  );
-  const rangeTotal = msToHm(groupTotalsMs.reduce((a, b) => a + b, 0));
+
+  // Per-day totals computed from the FULL set so they don't change as you paginate.
+  const dayTotalsMs = useMemo(() => {
+    const byDay = new Map<string, EffectivePunch[]>();
+    for (const r of rows) {
+      const k = madridDayKeyOf(r.effective_time);
+      if (!byDay.has(k)) byDay.set(k, []);
+      byDay.get(k)!.push(r);
+    }
+    const out = new Map<string, number>();
+    for (const [k, items] of byDay) {
+      out.set(k, workedMsForDay(items, k === todayKey ? Date.now() : null));
+    }
+    return out;
+  }, [rows, todayKey]);
+
+  const rangeTotal = msToHm(Array.from(dayTotalsMs.values()).reduce((a, b) => a + b, 0));
+
+  const totalPages = Math.max(1, Math.ceil(rows.length / pageSize));
+  const safePage = Math.min(page, totalPages - 1);
+  const pagedRows = rows.slice(safePage * pageSize, (safePage + 1) * pageSize);
+
+  // Group the paginated slice for rendering (day totals come from dayTotalsMs).
+  const groups = useMemo(() => {
+    const m = new Map<string, EffectivePunch[]>();
+    for (const r of pagedRows) {
+      const k = madridDayKeyOf(r.effective_time);
+      if (!m.has(k)) m.set(k, []);
+      m.get(k)!.push(r);
+    }
+    return Array.from(m.entries());
+  }, [pagedRows]);
 
   return (
     <div className="min-h-full max-w-md mx-auto px-4 py-6 space-y-4">
@@ -105,8 +131,8 @@ export function EmployeeHistory() {
               </span>
             </div>
           )}
-          {groups.map(([dayKey, items], idx) => {
-            const dayTotal = msToHm(groupTotalsMs[idx]);
+          {groups.map(([dayKey, items]) => {
+            const dayTotal = msToHm(dayTotalsMs.get(dayKey) ?? 0);
             return (
               <section key={dayKey} className="space-y-2">
                 <div className="px-1 flex items-baseline justify-between gap-2">
@@ -131,6 +157,42 @@ export function EmployeeHistory() {
               </section>
             );
           })}
+
+          <div className="app-card px-4 py-3 flex items-center justify-between gap-3 flex-wrap text-sm">
+            <label className="flex items-center gap-2">
+              <span className="text-slate-600">{t('history.pagination.perPage')}</span>
+              <select
+                value={pageSize}
+                onChange={e => setPageSize(Number(e.target.value) as PageSize)}
+                className="px-2 py-1 rounded-md bg-white ring-1 ring-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
+              >
+                {PAGE_SIZES.map(n => (
+                  <option key={n} value={n}>{n}</option>
+                ))}
+              </select>
+            </label>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setPage(p => Math.max(0, p - 1))}
+                disabled={safePage <= 0}
+                className="px-3 py-1 rounded-md ring-1 ring-slate-300 text-slate-700 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-50"
+              >
+                {t('history.pagination.prev')}
+              </button>
+              <span className="text-xs text-slate-500 tabular-nums min-w-max">
+                {t('history.pagination.pageOf', { page: safePage + 1, total: totalPages })}
+              </span>
+              <button
+                type="button"
+                onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))}
+                disabled={safePage >= totalPages - 1}
+                className="px-3 py-1 rounded-md ring-1 ring-slate-300 text-slate-700 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-50"
+              >
+                {t('history.pagination.next')}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
