@@ -495,42 +495,44 @@ export function AdminDashboard() {
                         return (
                           <li key={`${locationAnchor.id}-${idx}`} className="px-4 py-3 flex items-center gap-3 flex-wrap">
                             <div className="flex items-center gap-2">
-                              {s.in
-                                ? <TimeBox p={s.in} onModify={() => setModal({ mode: 'modify', target: targetOf(s.in!) })} />
-                                : <span className="inline-flex items-center px-3 py-1.5 rounded-md bg-slate-50 ring-1 ring-slate-200 text-slate-400 text-sm">—</span>}
+                              {s.in ? (
+                                <div className="flex items-center gap-1">
+                                  <TimeBox p={s.in} onModify={() => setModal({ mode: 'modify', target: targetOf(s.in!) })} />
+                                  <button
+                                    type="button"
+                                    onClick={() => setModal({ mode: 'delete', target: targetOf(s.in!) })}
+                                    className="h-7 w-7 inline-flex items-center justify-center rounded-md text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition"
+                                    title={`${t('admin.correct.delete')} · ${t('punch.in')}`}
+                                    aria-label={`${t('admin.correct.delete')} ${t('punch.in')}`}
+                                  >
+                                    ✕
+                                  </button>
+                                </div>
+                              ) : (
+                                <span className="inline-flex items-center px-3 py-1.5 rounded-md bg-slate-50 ring-1 ring-slate-200 text-slate-400 text-sm">—</span>
+                              )}
                               <span className="text-slate-400">–</span>
-                              {s.out
-                                ? <TimeBox p={s.out} onModify={() => setModal({ mode: 'modify', target: targetOf(s.out!) })} />
-                                : (
-                                  <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-amber-100 text-amber-800 text-sm font-medium">
-                                    ⚠️ {t('admin.shifts.openShift')}
-                                  </span>
-                                )}
+                              {s.out ? (
+                                <div className="flex items-center gap-1">
+                                  <TimeBox p={s.out} onModify={() => setModal({ mode: 'modify', target: targetOf(s.out!) })} />
+                                  <button
+                                    type="button"
+                                    onClick={() => setModal({ mode: 'delete', target: targetOf(s.out!) })}
+                                    className="h-7 w-7 inline-flex items-center justify-center rounded-md text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition"
+                                    title={`${t('admin.correct.delete')} · ${t('punch.out')}`}
+                                    aria-label={`${t('admin.correct.delete')} ${t('punch.out')}`}
+                                  >
+                                    ✕
+                                  </button>
+                                </div>
+                              ) : (
+                                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-amber-100 text-amber-800 text-sm font-medium">
+                                  ⚠️ {t('admin.shifts.openShift')}
+                                </span>
+                              )}
                             </div>
-                            <div className="ml-auto flex items-center gap-2 flex-wrap">
+                            <div className="ml-auto">
                               <LocationPill p={locationAnchor} offices={offices} t={t} />
-                              {s.in && (
-                                <button
-                                  type="button"
-                                  onClick={() => setModal({ mode: 'delete', target: targetOf(s.in!) })}
-                                  className="h-7 w-7 inline-flex items-center justify-center rounded-md text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition"
-                                  title={`${t('admin.correct.delete')} · ${t('punch.in')}`}
-                                  aria-label={`${t('admin.correct.delete')} ${t('punch.in')}`}
-                                >
-                                  ✕
-                                </button>
-                              )}
-                              {s.out && (
-                                <button
-                                  type="button"
-                                  onClick={() => setModal({ mode: 'delete', target: targetOf(s.out!) })}
-                                  className="h-7 w-7 inline-flex items-center justify-center rounded-md text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition"
-                                  title={`${t('admin.correct.delete')} · ${t('punch.out')}`}
-                                  aria-label={`${t('admin.correct.delete')} ${t('punch.out')}`}
-                                >
-                                  ✕
-                                </button>
-                              )}
                             </div>
                           </li>
                         );
