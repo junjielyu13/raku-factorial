@@ -117,7 +117,8 @@ export function PunchCorrectionModal({ mode, target, employees, onClose, onDone 
               </div>
               <label className="block space-y-1.5">
                 <span className="text-sm font-medium text-slate-700">{t('admin.correct.timeLabel')}</span>
-                <input type="datetime-local" required value={datetime} onChange={e => setDatetime(e.target.value)} className="app-input" />
+                <input type="datetime-local" required max={toLocalInput(new Date().toISOString())}
+                  value={datetime} onChange={e => setDatetime(e.target.value)} className="app-input" />
               </label>
             </>
           )}
