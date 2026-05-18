@@ -164,24 +164,32 @@ export function AdminDashboard() {
 
   return (
     <div className="min-h-full max-w-4xl mx-auto px-4 py-6 space-y-5">
-      <header className="flex items-start justify-between gap-3 flex-wrap">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900">{t('admin.todayTitle')}</h1>
-          <div className="text-sm text-slate-500">
-            {rangeFilter === 'day'
-              ? formatDate(new Date(`${selectedDate}T12:00:00Z`).toISOString())
-              : rangeFilter === 'custom'
-                ? `${formatDate(new Date(`${customStart}T12:00:00Z`).toISOString())} – ${formatDate(new Date(`${customEnd}T12:00:00Z`).toISOString())}`
-                : t(`admin.range.${rangeFilter}`)}
+      <header className="space-y-4">
+        <div className="flex items-start justify-between gap-3 flex-wrap">
+          <div>
+            <h1 className="text-2xl font-bold text-slate-900">{t('admin.todayTitle')}</h1>
+            <div className="text-sm text-slate-500">
+              {rangeFilter === 'day'
+                ? formatDate(new Date(`${selectedDate}T12:00:00Z`).toISOString())
+                : rangeFilter === 'custom'
+                  ? `${formatDate(new Date(`${customStart}T12:00:00Z`).toISOString())} – ${formatDate(new Date(`${customEnd}T12:00:00Z`).toISOString())}`
+                  : t(`admin.range.${rangeFilter}`)}
+            </div>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <LanguagePicker />
+            <LogoutButton />
           </div>
         </div>
-        <div className="flex items-center gap-2 flex-wrap">
-          <Link to="/admin/approvals" className="app-btn-ghost">{t('admin.approvalsLink')}</Link>
-          <Link to="/admin/export" className="app-btn-ghost">{t('admin.exportLink')}</Link>
-          <Link to="/" className="app-btn-ghost">{t('admin.employeeViewLink')}</Link>
-          <LanguagePicker />
-          <LogoutButton />
-        </div>
+        <nav className="flex items-center justify-between gap-2 flex-wrap border-t border-slate-200 pt-3">
+          <div className="flex items-center gap-2 flex-wrap">
+            <Link to="/admin/approvals" className="app-btn-ghost">{t('admin.approvalsLink')}</Link>
+            <Link to="/admin/export" className="app-btn-ghost">{t('admin.exportLink')}</Link>
+          </div>
+          <Link to="/" className="text-sm text-emerald-700 hover:underline">
+            {t('admin.employeeViewLink')} →
+          </Link>
+        </nav>
       </header>
 
       <div className="flex items-center gap-3 flex-wrap text-sm">
