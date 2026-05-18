@@ -92,7 +92,10 @@ interface Messages {
       day: string;
       last7: string;
       last30: string;
+      custom: string;
     };
+    fromLabel: string;
+    toLabel: string;
     stats: {
       title: string;
       total: string;  // uses {h}, {m}
@@ -231,7 +234,9 @@ export const MESSAGES: Record<Lang, Messages> = {
       filterAll: '全部员工',
       filterLabel: '员工筛选',
       rangeLabel: '范围',
-      range: { day: '某一天', last7: '近 7 天', last30: '近 30 天' },
+      range: { day: '某一天', last7: '近 7 天', last30: '近 30 天', custom: '自定义' },
+      fromLabel: '从',
+      toLabel: '到',
       stats: {
         title: '工时统计',
         total: '合计 {h} 小时 {m} 分',
@@ -378,7 +383,9 @@ export const MESSAGES: Record<Lang, Messages> = {
       filterAll: 'All employees',
       filterLabel: 'Filter by employee',
       rangeLabel: 'Range',
-      range: { day: 'Single day', last7: 'Last 7 days', last30: 'Last 30 days' },
+      range: { day: 'Single day', last7: 'Last 7 days', last30: 'Last 30 days', custom: 'Custom' },
+      fromLabel: 'From',
+      toLabel: 'To',
       stats: {
         title: 'Hours worked',
         total: 'Total {h}h {m}m',
@@ -525,7 +532,9 @@ export const MESSAGES: Record<Lang, Messages> = {
       filterAll: 'Todos los empleados',
       filterLabel: 'Filtrar por empleado',
       rangeLabel: 'Rango',
-      range: { day: 'Un día', last7: 'Últimos 7 días', last30: 'Últimos 30 días' },
+      range: { day: 'Un día', last7: 'Últimos 7 días', last30: 'Últimos 30 días', custom: 'Personalizado' },
+      fromLabel: 'Desde',
+      toLabel: 'Hasta',
       stats: {
         title: 'Horas trabajadas',
         total: 'Total {h} h {m} min',

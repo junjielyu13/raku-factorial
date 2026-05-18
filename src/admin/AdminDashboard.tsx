@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
-import { formatTime, formatDate, madridDayRange, madridDayKeyOf, madridTodayKey } from '../lib/time';
+import { formatTime, formatDate, formatDateTime, madridDayRange, madridDayKeyOf, madridTodayKey } from '../lib/time';
 import { workedMsForDay, msToHm } from '../lib/worked';
 import { useTranslation } from '../i18n/LanguageContext';
 import { LanguagePicker } from '../components/LanguagePicker';
@@ -11,7 +11,11 @@ import { PunchCorrectionModal } from '../components/PunchCorrectionModal';
 import type { CorrectionTarget } from '../components/PunchCorrectionModal';
 import type { EffectivePunch, Employee } from '../lib/types';
 
-type RangeFilter = 'day' | 'last7' | 'last30';
+type RangeFilter = 'day' | 'last7' | 'last30' | 'custom';
+
+function daysAgoKey(days: number): string {
+  return madridDayKeyOf(new Date(Date.now() - days * 24 * 60 * 60 * 1000));
+}
 
 const PAGE_SIZES = [10, 50, 100] as const;
 type PageSize = typeof PAGE_SIZES[number];
@@ -63,12 +67,16 @@ export function AdminDashboard() {
   const [filterEmployeeId, setFilterEmployeeId] = useState<string>('all');
   const [rangeFilter, setRangeFilter] = useState<RangeFilter>('day');
   const [selectedDate, setSelectedDate] = useState<string>(madridTodayKey());
+  const [customStart, setCustomStart] = useState<string>(() => daysAgoKey(7));
+  const [customEnd, setCustomEnd] = useState<string>(madridTodayKey());
   const [pageSize, setPageSize] = useState<PageSize>(10);
   const [page, setPage] = useState(0);
   const [modal, setModal] = useState<ModalState | null>(null);
 
   // Reset to first page when filter inputs or page size change.
-  useEffect(() => { setPage(0); }, [rangeFilter, selectedDate, filterEmployeeId, pageSize]);
+  useEffect(() => {
+    setPage(0);
+  }, [rangeFilter, selectedDate, customStart, customEnd, filterEmployeeId, pageSize]);
 
   useEffect(() => {
     supabase.from('office_locations').select('latitude, longitude').eq('active', true)
@@ -94,6 +102,11 @@ export function AdminDashboard() {
     if (rangeFilter === 'day') {
       const { start, end } = madridDayRange(selectedDate);
       q = q.gte('effective_time', start).lt('effective_time', end);
+    } else if (rangeFilter === 'custom') {
+      if (customStart > customEnd) { setRows([]); return; }
+      const { start } = madridDayRange(customStart);
+      const { end } = madridDayRange(customEnd);
+      q = q.gte('effective_time', start).lt('effective_time', end);
     } else {
       const days = rangeFilter === 'last7' ? 7 : 30;
       const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
@@ -102,17 +115,17 @@ export function AdminDashboard() {
 
     const { data } = await q.order('effective_time', { ascending: false });
     setRows((data as unknown as Row[]) ?? []);
-  }, [rangeFilter, selectedDate]);
+  }, [rangeFilter, selectedDate, customStart, customEnd]);
 
   useEffect(() => {
     fetchPunches();
-    const ch = supabase.channel(`punches-admin-${rangeFilter}-${selectedDate}`)
+    const ch = supabase.channel(`punches-admin-${rangeFilter}-${selectedDate}-${customStart}-${customEnd}`)
       .on('postgres_changes',
           { event: 'INSERT', schema: 'public', table: 'effective_punches' },
           () => fetchPunches())
       .subscribe();
     return () => { supabase.removeChannel(ch); };
-  }, [rangeFilter, selectedDate, fetchPunches]);
+  }, [rangeFilter, selectedDate, customStart, customEnd, fetchPunches]);
 
   const visibleRows = filterEmployeeId === 'all'
     ? rows
@@ -157,7 +170,9 @@ export function AdminDashboard() {
           <div className="text-sm text-slate-500">
             {rangeFilter === 'day'
               ? formatDate(new Date(`${selectedDate}T12:00:00Z`).toISOString())
-              : t(`admin.range.${rangeFilter}`)}
+              : rangeFilter === 'custom'
+                ? `${formatDate(new Date(`${customStart}T12:00:00Z`).toISOString())} – ${formatDate(new Date(`${customEnd}T12:00:00Z`).toISOString())}`
+                : t(`admin.range.${rangeFilter}`)}
           </div>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
@@ -180,6 +195,7 @@ export function AdminDashboard() {
             <option value="day">{t('admin.range.day')}</option>
             <option value="last7">{t('admin.range.last7')}</option>
             <option value="last30">{t('admin.range.last30')}</option>
+            <option value="custom">{t('admin.range.custom')}</option>
           </select>
         </label>
         {rangeFilter === 'day' && (
@@ -197,6 +213,36 @@ export function AdminDashboard() {
               className="px-3 py-1.5 rounded-lg bg-white ring-1 ring-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
             />
           </label>
+        )}
+        {rangeFilter === 'custom' && (
+          <>
+            <label className="flex items-center gap-2">
+              <span className="text-slate-600">{t('admin.fromLabel')}</span>
+              <input
+                type="date"
+                value={customStart}
+                max={customEnd}
+                onChange={e => { if (e.target.value) setCustomStart(e.target.value); }}
+                className="px-3 py-1.5 rounded-lg bg-white ring-1 ring-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
+              />
+            </label>
+            <label className="flex items-center gap-2">
+              <span className="text-slate-600">{t('admin.toLabel')}</span>
+              <input
+                type="date"
+                value={customEnd}
+                min={customStart}
+                max={madridTodayKey()}
+                onChange={e => {
+                  const v = e.target.value;
+                  if (!v) return;
+                  if (v > madridTodayKey()) return;
+                  setCustomEnd(v);
+                }}
+                className="px-3 py-1.5 rounded-lg bg-white ring-1 ring-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
+              />
+            </label>
+          </>
         )}
         <label className="flex items-center gap-2">
           <span className="text-slate-600">{t('admin.filterLabel')}</span>
@@ -244,7 +290,7 @@ export function AdminDashboard() {
         <div className="app-card px-4 py-8 text-center text-slate-500 text-sm">
           {rangeFilter === 'day' ? t('admin.noPunchesToday') : t('admin.noPunchesRange')}
         </div>
-      ) : rangeFilter !== 'day' ? null : (
+      ) : (
         <div className="app-card overflow-hidden">
           <div className="overflow-x-auto">
           <table className="w-full text-sm">
@@ -274,7 +320,7 @@ export function AdminDashboard() {
                 return (
                   <tr key={r.id} className="hover:bg-slate-50/50">
                     <td className="px-4 py-3 whitespace-nowrap font-mono tabular-nums text-slate-900">
-                      {formatTime(r.effective_time)}
+                      {rangeFilter === 'day' ? formatTime(r.effective_time) : formatDateTime(r.effective_time)}
                       {r.source_request_id && (
                         <span className="ml-1.5 text-xs font-sans text-emerald-600" title={t('admin.correct.correctedBadge')}>
                           ✎
