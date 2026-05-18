@@ -84,6 +84,7 @@ interface Messages {
       status: string;
       info: string;
       warn: string;
+      actions: string;
     };
     approvals: {
       title: string;
@@ -101,6 +102,26 @@ interface Messages {
       download: string;
       generating: string;
       failed: string;        // uses {code}
+    };
+    correct: {
+      modify: string;
+      delete: string;
+      addPunch: string;
+      modalAddTitle: string;
+      modalModifyTitle: string;
+      modalDeleteTitle: string;
+      employeeLabel: string;
+      typeLabel: string;
+      timeLabel: string;
+      reasonLabel: string;
+      reasonPlaceholder: string;
+      selectEmployee: string;
+      save: string;
+      saving: string;
+      cancel: string;
+      confirmDelete: string;
+      correctedBadge: string;
+      errors: Record<string, string>;
     };
   };
   language: {
@@ -187,6 +208,7 @@ export const MESSAGES: Record<Lang, Messages> = {
         status: '状态',
         info: '其他信息',
         warn: '⚠️',
+        actions: '操作',
       },
       approvals: {
         title: '待审批的补卡申请',
@@ -204,6 +226,38 @@ export const MESSAGES: Record<Lang, Messages> = {
         download: '下载 CSV',
         generating: '生成中…',
         failed: '导出失败：{code}',
+      },
+      correct: {
+        modify: '修改',
+        delete: '删除',
+        addPunch: '补登打卡',
+        modalAddTitle: '补登打卡',
+        modalModifyTitle: '修改打卡',
+        modalDeleteTitle: '删除打卡',
+        employeeLabel: '员工',
+        typeLabel: '类型',
+        timeLabel: '时间',
+        reasonLabel: '原因',
+        reasonPlaceholder: '请填写修正原因（审计留存）',
+        selectEmployee: '选择员工',
+        save: '保存',
+        saving: '保存中…',
+        cancel: '取消',
+        confirmDelete: '确认删除',
+        correctedBadge: '已修正',
+        errors: {
+          BAD_ACTION: '操作类型不正确。',
+          BAD_REASON: '原因不能为空。',
+          BAD_KIND: '类型不正确。',
+          BAD_TIME: '时间格式不正确。',
+          FUTURE_TIME: '时间不能是未来。',
+          BAD_EMPLOYEE: '请选择员工。',
+          BAD_TARGET: '未找到目标打卡。',
+          ALREADY_CHANGED: '这条打卡已被修改过，请刷新后重试。',
+          NOT_FOUND: '未找到目标打卡。',
+          NOT_ADMIN: '需要管理员权限。',
+          UNKNOWN: '操作失败：{code}',
+        },
       },
     },
     language: { label: '语言' },
@@ -286,6 +340,7 @@ export const MESSAGES: Record<Lang, Messages> = {
         status: 'Status',
         info: 'Details',
         warn: '⚠️',
+        actions: 'Actions',
       },
       approvals: {
         title: 'Pending correction requests',
@@ -303,6 +358,38 @@ export const MESSAGES: Record<Lang, Messages> = {
         download: 'Download CSV',
         generating: 'Generating…',
         failed: 'Export failed: {code}',
+      },
+      correct: {
+        modify: 'Modify',
+        delete: 'Delete',
+        addPunch: 'Add punch',
+        modalAddTitle: 'Add punch',
+        modalModifyTitle: 'Modify punch',
+        modalDeleteTitle: 'Delete punch',
+        employeeLabel: 'Employee',
+        typeLabel: 'Type',
+        timeLabel: 'Time',
+        reasonLabel: 'Reason',
+        reasonPlaceholder: 'Reason for the correction (kept for audit)',
+        selectEmployee: 'Select employee',
+        save: 'Save',
+        saving: 'Saving…',
+        cancel: 'Cancel',
+        confirmDelete: 'Confirm delete',
+        correctedBadge: 'corrected',
+        errors: {
+          BAD_ACTION: 'Invalid action.',
+          BAD_REASON: 'Reason is required.',
+          BAD_KIND: 'Invalid type.',
+          BAD_TIME: 'Invalid time format.',
+          FUTURE_TIME: 'Time cannot be in the future.',
+          BAD_EMPLOYEE: 'Please select an employee.',
+          BAD_TARGET: 'Target punch not found.',
+          ALREADY_CHANGED: 'This punch was already changed. Refresh and retry.',
+          NOT_FOUND: 'Target punch not found.',
+          NOT_ADMIN: 'Admin privileges required.',
+          UNKNOWN: 'Action failed: {code}',
+        },
       },
     },
     language: { label: 'Language' },
@@ -385,6 +472,7 @@ export const MESSAGES: Record<Lang, Messages> = {
         status: 'Estado',
         info: 'Detalles',
         warn: '⚠️',
+        actions: 'Acciones',
       },
       approvals: {
         title: 'Solicitudes pendientes',
@@ -402,6 +490,38 @@ export const MESSAGES: Record<Lang, Messages> = {
         download: 'Descargar CSV',
         generating: 'Generando…',
         failed: 'Exportación fallida: {code}',
+      },
+      correct: {
+        modify: 'Modificar',
+        delete: 'Eliminar',
+        addPunch: 'Añadir fichaje',
+        modalAddTitle: 'Añadir fichaje',
+        modalModifyTitle: 'Modificar fichaje',
+        modalDeleteTitle: 'Eliminar fichaje',
+        employeeLabel: 'Empleado',
+        typeLabel: 'Tipo',
+        timeLabel: 'Hora',
+        reasonLabel: 'Motivo',
+        reasonPlaceholder: 'Motivo de la corrección (se conserva para auditoría)',
+        selectEmployee: 'Seleccionar empleado',
+        save: 'Guardar',
+        saving: 'Guardando…',
+        cancel: 'Cancelar',
+        confirmDelete: 'Confirmar eliminación',
+        correctedBadge: 'corregido',
+        errors: {
+          BAD_ACTION: 'Acción no válida.',
+          BAD_REASON: 'El motivo es obligatorio.',
+          BAD_KIND: 'Tipo no válido.',
+          BAD_TIME: 'Formato de hora no válido.',
+          FUTURE_TIME: 'La hora no puede ser futura.',
+          BAD_EMPLOYEE: 'Selecciona un empleado.',
+          BAD_TARGET: 'Fichaje objetivo no encontrado.',
+          ALREADY_CHANGED: 'Este fichaje ya se modificó. Actualiza e inténtalo de nuevo.',
+          NOT_FOUND: 'Fichaje objetivo no encontrado.',
+          NOT_ADMIN: 'Se requieren privilegios de administrador.',
+          UNKNOWN: 'Acción fallida: {code}',
+        },
       },
     },
     language: { label: 'Idioma' },
