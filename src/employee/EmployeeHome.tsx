@@ -81,7 +81,7 @@ export function EmployeeHome() {
             <div className="px-4 py-6 text-center text-slate-500 text-sm">{t('home.noPunchYet')}</div>
           ) : (
             <ul className="divide-y divide-slate-100">
-              {today.map(p => (
+              {today.slice(-6).map(p => (
                 <li key={p.id} className="px-4 py-3 flex items-center gap-3">
                   <span className={`inline-flex items-center justify-center h-8 w-8 rounded-full text-xs font-semibold ${p.kind === 'in' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
                     {p.kind === 'in' ? '▶' : '■'}
