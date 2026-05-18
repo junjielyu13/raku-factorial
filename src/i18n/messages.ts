@@ -110,6 +110,14 @@ interface Messages {
       warn: string;
       actions: string;
     };
+    shifts: {
+      dateCol: string;
+      inCol: string;
+      outCol: string;
+      durationCol: string;
+      openShift: string;
+      strayOut: string;
+    };
     approvals: {
       title: string;
       none: string;
@@ -250,6 +258,14 @@ export const MESSAGES: Record<Lang, Messages> = {
         info: '其他信息',
         warn: '⚠️',
         actions: '操作',
+      },
+      shifts: {
+        dateCol: '日期',
+        inCol: '上班',
+        outCol: '下班',
+        durationCol: '时长',
+        openShift: '未下班',
+        strayOut: '无对应上班',
       },
       approvals: {
         title: '待审批的补卡申请',
@@ -400,6 +416,14 @@ export const MESSAGES: Record<Lang, Messages> = {
         warn: '⚠️',
         actions: 'Actions',
       },
+      shifts: {
+        dateCol: 'Date',
+        inCol: 'Clock in',
+        outCol: 'Clock out',
+        durationCol: 'Duration',
+        openShift: 'Not clocked out',
+        strayOut: 'No matching clock-in',
+      },
       approvals: {
         title: 'Pending correction requests',
         none: 'No pending requests',
@@ -548,6 +572,14 @@ export const MESSAGES: Record<Lang, Messages> = {
         info: 'Detalles',
         warn: '⚠️',
         actions: 'Acciones',
+      },
+      shifts: {
+        dateCol: 'Fecha',
+        inCol: 'Entrada',
+        outCol: 'Salida',
+        durationCol: 'Duración',
+        openShift: 'Sin salida',
+        strayOut: 'Sin entrada asociada',
       },
       approvals: {
         title: 'Solicitudes pendientes',
