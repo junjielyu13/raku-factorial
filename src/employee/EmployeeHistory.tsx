@@ -3,7 +3,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../auth/useAuth';
-import { formatDate, formatTime, madridDayRange, madridTodayKey } from '../lib/time';
+import { formatDate, formatTime, madridDayRange, madridDayKeyOf, madridTodayKey } from '../lib/time';
+import { workedMsForDay, msToHm } from '../lib/worked';
 import { useTranslation } from '../i18n/LanguageContext';
 import type { EffectivePunch } from '../lib/types';
 
@@ -41,12 +42,18 @@ export function EmployeeHistory() {
   const groups = useMemo(() => {
     const m = new Map<string, EffectivePunch[]>();
     for (const r of rows) {
-      const key = formatDate(r.effective_time);
+      const key = madridDayKeyOf(r.effective_time);
       if (!m.has(key)) m.set(key, []);
       m.get(key)!.push(r);
     }
     return Array.from(m.entries());
   }, [rows]);
+
+  const todayKey = madridTodayKey();
+  const groupTotalsMs = groups.map(
+    ([dayKey, items]) => workedMsForDay(items, dayKey === todayKey ? Date.now() : null),
+  );
+  const rangeTotal = msToHm(groupTotalsMs.reduce((a, b) => a + b, 0));
 
   return (
     <div className="min-h-full max-w-md mx-auto px-4 py-6 space-y-4">
@@ -90,22 +97,40 @@ export function EmployeeHistory() {
         <div className="app-card px-4 py-6 text-center text-slate-500 text-sm">{t('history.noRecords')}</div>
       ) : (
         <div className="space-y-4">
-          {groups.map(([date, items]) => (
-            <section key={date} className="space-y-2">
-              <h2 className="px-1 text-xs font-semibold uppercase tracking-wider text-slate-500">{date}</h2>
-              <ul className="app-card divide-y divide-slate-100 overflow-hidden">
-                {items.map(r => (
-                  <li key={r.id} className="px-4 py-3 flex items-center gap-3">
-                    <span className={`inline-flex items-center justify-center h-8 w-8 rounded-full text-xs font-semibold ${r.kind === 'in' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
-                      {r.kind === 'in' ? '▶' : '■'}
-                    </span>
-                    <span className="text-slate-700 flex-1">{r.kind === 'in' ? t('punch.in') : t('punch.out')}</span>
-                    <span className="font-mono tabular-nums text-slate-900">{formatTime(r.effective_time)}</span>
-                  </li>
-                ))}
-              </ul>
-            </section>
-          ))}
+          {filter !== 'day' && (
+            <div className="app-card px-4 py-3 flex items-center justify-between">
+              <span className="text-sm text-slate-600">{t(`history.filter.${filter}`)}</span>
+              <span className="text-sm font-semibold text-slate-900 tabular-nums">
+                {t('history.rangeTotal', { h: rangeTotal.h, m: rangeTotal.m })}
+              </span>
+            </div>
+          )}
+          {groups.map(([dayKey, items], idx) => {
+            const dayTotal = msToHm(groupTotalsMs[idx]);
+            return (
+              <section key={dayKey} className="space-y-2">
+                <div className="px-1 flex items-baseline justify-between gap-2">
+                  <h2 className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+                    {formatDate(items[0].effective_time)}
+                  </h2>
+                  <span className="text-xs font-medium text-slate-600 tabular-nums">
+                    {t('history.total', { h: dayTotal.h, m: dayTotal.m })}
+                  </span>
+                </div>
+                <ul className="app-card divide-y divide-slate-100 overflow-hidden">
+                  {items.map(r => (
+                    <li key={r.id} className="px-4 py-3 flex items-center gap-3">
+                      <span className={`inline-flex items-center justify-center h-8 w-8 rounded-full text-xs font-semibold ${r.kind === 'in' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
+                        {r.kind === 'in' ? '▶' : '■'}
+                      </span>
+                      <span className="text-slate-700 flex-1">{r.kind === 'in' ? t('punch.in') : t('punch.out')}</span>
+                      <span className="font-mono tabular-nums text-slate-900">{formatTime(r.effective_time)}</span>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            );
+          })}
         </div>
       )}
     </div>

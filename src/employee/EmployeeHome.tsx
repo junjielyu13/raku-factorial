@@ -7,6 +7,7 @@ import { PunchButton } from '../components/PunchButton';
 import { LanguagePicker } from '../components/LanguagePicker';
 import { LogoutButton } from '../components/LogoutButton';
 import { formatTime, formatDate, madridTodayRange } from '../lib/time';
+import { workedMsForDay, msToHm } from '../lib/worked';
 import { useTranslation } from '../i18n/LanguageContext';
 import type { EffectivePunch } from '../lib/types';
 
@@ -44,6 +45,17 @@ export function EmployeeHome() {
   const isOn = lastPunch?.kind === 'in';
   const nextKind: 'in' | 'out' = isOn ? 'out' : 'in';
 
+  // Re-tick once a minute while clocked in so the running total stays fresh.
+  const [tickNow, setTickNow] = useState(() => Date.now());
+  useEffect(() => {
+    if (!isOn) return;
+    setTickNow(Date.now());
+    const id = setInterval(() => setTickNow(Date.now()), 60_000);
+    return () => clearInterval(id);
+  }, [isOn]);
+
+  const { h: totalH, m: totalM } = msToHm(workedMsForDay(today, tickNow));
+
   return (
     <div className="min-h-full max-w-md mx-auto px-4 py-6 space-y-6">
       <header className="flex items-center justify-between gap-3">
@@ -73,7 +85,14 @@ export function EmployeeHome() {
       </section>
 
       <section className="space-y-2">
-        <h2 className="px-1 text-xs font-semibold uppercase tracking-wider text-slate-500">{t('home.todayLabel')}</h2>
+        <div className="px-1 flex items-baseline justify-between gap-2">
+          <h2 className="text-xs font-semibold uppercase tracking-wider text-slate-500">{t('home.todayLabel')}</h2>
+          {today.length > 0 && (
+            <span className="text-xs font-medium text-slate-600 tabular-nums">
+              {t('home.todayTotal', { h: totalH, m: totalM })}
+            </span>
+          )}
+        </div>
         <div className="app-card overflow-hidden">
           {loading ? (
             <div className="px-4 py-6 text-center text-slate-500 text-sm">{t('common.loading')}</div>

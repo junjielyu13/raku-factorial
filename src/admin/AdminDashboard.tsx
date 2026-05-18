@@ -1,14 +1,17 @@
 // src/admin/AdminDashboard.tsx
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
-import { formatTime, formatDate, madridDayRange, madridTodayKey } from '../lib/time';
+import { formatTime, formatDate, madridDayRange, madridDayKeyOf, madridTodayKey } from '../lib/time';
+import { workedMsForDay, msToHm } from '../lib/worked';
 import { useTranslation } from '../i18n/LanguageContext';
 import { LanguagePicker } from '../components/LanguagePicker';
 import { LogoutButton } from '../components/LogoutButton';
 import { PunchCorrectionModal } from '../components/PunchCorrectionModal';
 import type { CorrectionTarget } from '../components/PunchCorrectionModal';
 import type { EffectivePunch, Employee } from '../lib/types';
+
+type RangeFilter = 'day' | 'last7' | 'last30';
 
 interface Row extends EffectivePunch {
   employee: Pick<Employee, 'full_name' | 'email'>;
@@ -55,6 +58,7 @@ export function AdminDashboard() {
   const [offices, setOffices] = useState<OfficeCoords[]>([]);
   const [employees, setEmployees] = useState<EmployeeOption[]>([]);
   const [filterEmployeeId, setFilterEmployeeId] = useState<string>('all');
+  const [rangeFilter, setRangeFilter] = useState<RangeFilter>('day');
   const [selectedDate, setSelectedDate] = useState<string>(madridTodayKey());
   const [modal, setModal] = useState<ModalState | null>(null);
 
@@ -70,41 +74,79 @@ export function AdminDashboard() {
   }, []);
 
   const fetchPunches = useCallback(async () => {
-    const { start, end } = madridDayRange(selectedDate);
-    const { data } = await supabase
+    let q = supabase
       .from('effective_punches')
       .select(`
         *,
         employee:employees!effective_punches_employee_id_fkey(full_name, email),
         punch:punches!effective_punches_source_punch_id_fkey(latitude, longitude, accuracy_m)
       `)
-      .is('superseded_at', null)
-      .gte('effective_time', start)
-      .lt('effective_time', end)
-      .order('effective_time', { ascending: false });
+      .is('superseded_at', null);
+
+    if (rangeFilter === 'day') {
+      const { start, end } = madridDayRange(selectedDate);
+      q = q.gte('effective_time', start).lt('effective_time', end);
+    } else {
+      const days = rangeFilter === 'last7' ? 7 : 30;
+      const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
+      q = q.gte('effective_time', since);
+    }
+
+    const { data } = await q.order('effective_time', { ascending: false });
     setRows((data as unknown as Row[]) ?? []);
-  }, [selectedDate]);
+  }, [rangeFilter, selectedDate]);
 
   useEffect(() => {
     fetchPunches();
-    const ch = supabase.channel(`punches-${selectedDate}`)
+    const ch = supabase.channel(`punches-admin-${rangeFilter}-${selectedDate}`)
       .on('postgres_changes',
           { event: 'INSERT', schema: 'public', table: 'effective_punches' },
           () => fetchPunches())
       .subscribe();
     return () => { supabase.removeChannel(ch); };
-  }, [selectedDate, fetchPunches]);
+  }, [rangeFilter, selectedDate, fetchPunches]);
 
   const visibleRows = filterEmployeeId === 'all'
     ? rows
     : rows.filter(r => r.employee_id === filterEmployeeId);
+
+  const stats = useMemo(() => {
+    const todayKey = madridTodayKey();
+    const byEmployee = new Map<string, { name: string; rows: Row[] }>();
+    for (const r of visibleRows) {
+      if (!byEmployee.has(r.employee_id)) {
+        byEmployee.set(r.employee_id, { name: r.employee.full_name, rows: [] });
+      }
+      byEmployee.get(r.employee_id)!.rows.push(r);
+    }
+    const perEmployee = Array.from(byEmployee.entries()).map(([id, { name, rows: empRows }]) => {
+      const byDay = new Map<string, Row[]>();
+      for (const r of empRows) {
+        const dk = madridDayKeyOf(r.effective_time);
+        if (!byDay.has(dk)) byDay.set(dk, []);
+        byDay.get(dk)!.push(r);
+      }
+      let ms = 0;
+      for (const [dk, items] of byDay) {
+        ms += workedMsForDay(items, dk === todayKey ? Date.now() : null);
+      }
+      return { id, name, ms };
+    });
+    perEmployee.sort((a, b) => b.ms - a.ms || a.name.localeCompare(b.name));
+    const grandMs = perEmployee.reduce((a, b) => a + b.ms, 0);
+    return { perEmployee, grand: msToHm(grandMs) };
+  }, [visibleRows]);
 
   return (
     <div className="min-h-full max-w-4xl mx-auto px-4 py-6 space-y-5">
       <header className="flex items-start justify-between gap-3 flex-wrap">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">{t('admin.todayTitle')}</h1>
-          <div className="text-sm text-slate-500">{formatDate(new Date(`${selectedDate}T12:00:00Z`).toISOString())}</div>
+          <div className="text-sm text-slate-500">
+            {rangeFilter === 'day'
+              ? formatDate(new Date(`${selectedDate}T12:00:00Z`).toISOString())
+              : t(`admin.range.${rangeFilter}`)}
+          </div>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           <Link to="/admin/approvals" className="app-btn-ghost">{t('admin.approvalsLink')}</Link>
@@ -117,19 +159,33 @@ export function AdminDashboard() {
 
       <div className="flex items-center gap-3 flex-wrap text-sm">
         <label className="flex items-center gap-2">
-          <span className="text-slate-600">{t('admin.dateLabel')}</span>
-          <input
-            type="date"
-            value={selectedDate}
-            max={madridTodayKey()}
-            onChange={e => {
-              const v = e.target.value;
-              if (v && v > madridTodayKey()) return;
-              if (v) setSelectedDate(v);
-            }}
+          <span className="text-slate-600">{t('admin.rangeLabel')}</span>
+          <select
+            value={rangeFilter}
+            onChange={e => setRangeFilter(e.target.value as RangeFilter)}
             className="px-3 py-1.5 rounded-lg bg-white ring-1 ring-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
-          />
+          >
+            <option value="day">{t('admin.range.day')}</option>
+            <option value="last7">{t('admin.range.last7')}</option>
+            <option value="last30">{t('admin.range.last30')}</option>
+          </select>
         </label>
+        {rangeFilter === 'day' && (
+          <label className="flex items-center gap-2">
+            <span className="text-slate-600">{t('admin.dateLabel')}</span>
+            <input
+              type="date"
+              value={selectedDate}
+              max={madridTodayKey()}
+              onChange={e => {
+                const v = e.target.value;
+                if (v && v > madridTodayKey()) return;
+                if (v) setSelectedDate(v);
+              }}
+              className="px-3 py-1.5 rounded-lg bg-white ring-1 ring-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
+            />
+          </label>
+        )}
         <label className="flex items-center gap-2">
           <span className="text-slate-600">{t('admin.filterLabel')}</span>
           <select
@@ -148,9 +204,35 @@ export function AdminDashboard() {
         </button>
       </div>
 
+      {stats.perEmployee.length > 0 && (
+        <div className="app-card p-4 space-y-3">
+          <div className="flex items-baseline justify-between gap-3">
+            <h2 className="text-xs font-semibold uppercase tracking-wider text-slate-500">{t('admin.stats.title')}</h2>
+            <span className="text-sm font-semibold text-slate-900 tabular-nums">
+              {t('admin.stats.total', { h: stats.grand.h, m: stats.grand.m })}
+            </span>
+          </div>
+          <ul className="divide-y divide-slate-100">
+            {stats.perEmployee.map(s => {
+              const hm = msToHm(s.ms);
+              return (
+                <li key={s.id} className="flex items-center justify-between py-2">
+                  <span className="text-sm text-slate-700">{s.name}</span>
+                  <span className="text-sm font-mono tabular-nums text-slate-900">
+                    {t('admin.stats.hours', { h: hm.h, m: hm.m })}
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      )}
+
       {visibleRows.length === 0 ? (
-        <div className="app-card px-4 py-8 text-center text-slate-500 text-sm">{t('admin.noPunchesToday')}</div>
-      ) : (
+        <div className="app-card px-4 py-8 text-center text-slate-500 text-sm">
+          {rangeFilter === 'day' ? t('admin.noPunchesToday') : t('admin.noPunchesRange')}
+        </div>
+      ) : rangeFilter !== 'day' ? null : (
         <div className="app-card overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-slate-50 text-slate-500">

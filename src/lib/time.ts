@@ -42,9 +42,14 @@ export function currentMonthKey(): string {
 
 /** YYYY-MM-DD in Europe/Madrid for `now`. */
 export function madridTodayKey(): string {
+  return madridDayKeyOf(new Date());
+}
+
+/** YYYY-MM-DD in Europe/Madrid for an ISO timestamp or Date. */
+export function madridDayKeyOf(iso: string | Date): string {
   const parts = new Intl.DateTimeFormat('sv-SE', {
     timeZone: 'Europe/Madrid', year: 'numeric', month: '2-digit', day: '2-digit',
-  }).formatToParts(new Date());
+  }).formatToParts(typeof iso === 'string' ? new Date(iso) : iso);
   return ['year', 'month', 'day'].map(t => parts.find(p => p.type === t)!.value).join('-');
 }
 

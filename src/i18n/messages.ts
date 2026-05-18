@@ -41,6 +41,7 @@ interface Messages {
   };
   home: {
     todayLabel: string;
+    todayTotal: string;     // uses {h}, {m}
     noPunchYet: string;
     myHistory: string;
     submitEdit: string;
@@ -57,6 +58,8 @@ interface Messages {
       day: string;
     };
     pickDate: string;
+    total: string;       // uses {h}, {m}
+    rangeTotal: string;  // uses {h}, {m}
   };
   editRequest: {
     title: string;
@@ -78,6 +81,18 @@ interface Messages {
     distanceFromOffice: string; // uses {distance}
     filterAll: string;
     filterLabel: string;
+    rangeLabel: string;
+    range: {
+      day: string;
+      last7: string;
+      last30: string;
+    };
+    stats: {
+      title: string;
+      total: string;  // uses {h}, {m}
+      hours: string;  // uses {h}, {m}
+    };
+    noPunchesRange: string;
     table: {
       time: string;
       person: string;
@@ -163,6 +178,7 @@ export const MESSAGES: Record<Lang, Messages> = {
     },
     home: {
       todayLabel: '今天',
+      todayTotal: '共 {h} 小时 {m} 分',
       noPunchYet: '还没打卡',
       myHistory: '我的历史',
       submitEdit: '补卡申请',
@@ -175,6 +191,8 @@ export const MESSAGES: Record<Lang, Messages> = {
       noRecords: '暂无记录',
       filter: { last7: '近 7 天', last30: '近 30 天', day: '某一天' },
       pickDate: '选择日期',
+      total: '共 {h} 小时 {m} 分',
+      rangeTotal: '合计 {h} 小时 {m} 分',
     },
     editRequest: {
       title: '补卡申请',
@@ -202,6 +220,14 @@ export const MESSAGES: Record<Lang, Messages> = {
       distanceFromOffice: '距离办公点 {distance}',
       filterAll: '全部员工',
       filterLabel: '员工筛选',
+      rangeLabel: '范围',
+      range: { day: '某一天', last7: '近 7 天', last30: '近 30 天' },
+      stats: {
+        title: '工时统计',
+        total: '合计 {h} 小时 {m} 分',
+        hours: '{h} 小时 {m} 分',
+      },
+      noPunchesRange: '该范围内没有打卡记录',
       table: {
         time: '时间',
         person: '员工',
@@ -295,6 +321,7 @@ export const MESSAGES: Record<Lang, Messages> = {
     },
     home: {
       todayLabel: 'Today',
+      todayTotal: 'Total {h}h {m}m',
       noPunchYet: 'No punches yet today',
       myHistory: 'My history',
       submitEdit: 'Request correction',
@@ -307,6 +334,8 @@ export const MESSAGES: Record<Lang, Messages> = {
       noRecords: 'No records',
       filter: { last7: 'Last 7 days', last30: 'Last 30 days', day: 'Pick a day' },
       pickDate: 'Pick date',
+      total: 'Total {h}h {m}m',
+      rangeTotal: 'Total {h}h {m}m',
     },
     editRequest: {
       title: 'Punch correction request',
@@ -334,6 +363,14 @@ export const MESSAGES: Record<Lang, Messages> = {
       distanceFromOffice: '{distance} from office',
       filterAll: 'All employees',
       filterLabel: 'Filter by employee',
+      rangeLabel: 'Range',
+      range: { day: 'Single day', last7: 'Last 7 days', last30: 'Last 30 days' },
+      stats: {
+        title: 'Hours worked',
+        total: 'Total {h}h {m}m',
+        hours: '{h}h {m}m',
+      },
+      noPunchesRange: 'No punches in this range',
       table: {
         time: 'Time',
         person: 'Employee',
@@ -427,6 +464,7 @@ export const MESSAGES: Record<Lang, Messages> = {
     },
     home: {
       todayLabel: 'Hoy',
+      todayTotal: 'Total {h} h {m} min',
       noPunchYet: 'Aún no has fichado',
       myHistory: 'Mi historial',
       submitEdit: 'Solicitar corrección',
@@ -439,6 +477,8 @@ export const MESSAGES: Record<Lang, Messages> = {
       noRecords: 'Sin registros',
       filter: { last7: 'Últimos 7 días', last30: 'Últimos 30 días', day: 'Un día' },
       pickDate: 'Elegir fecha',
+      total: 'Total {h} h {m} min',
+      rangeTotal: 'Total {h} h {m} min',
     },
     editRequest: {
       title: 'Solicitud de corrección',
@@ -466,6 +506,14 @@ export const MESSAGES: Record<Lang, Messages> = {
       distanceFromOffice: '{distance} de la oficina',
       filterAll: 'Todos los empleados',
       filterLabel: 'Filtrar por empleado',
+      rangeLabel: 'Rango',
+      range: { day: 'Un día', last7: 'Últimos 7 días', last30: 'Últimos 30 días' },
+      stats: {
+        title: 'Horas trabajadas',
+        total: 'Total {h} h {m} min',
+        hours: '{h} h {m} min',
+      },
+      noPunchesRange: 'Sin fichajes en este rango',
       table: {
         time: 'Hora',
         person: 'Empleado',
