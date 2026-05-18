@@ -97,66 +97,61 @@ function formatDistance(m: number): string {
   return m < 1000 ? `${Math.round(m)}m` : `${(m / 1000).toFixed(1)}km`;
 }
 
-function renderShiftPunchCell(
-  p: Row | null,
-  kind: 'in' | 'out',
-  offices: OfficeCoords[],
-  t: (key: string, vars?: Record<string, string | number>) => string,
-  setModal: (m: ModalState | null) => void,
-) {
-  if (!p) return <span className="text-slate-300">—</span>;
-  const lat = p.punch?.latitude;
-  const lng = p.punch?.longitude;
-  const hasGps = typeof lat === 'number' && typeof lng === 'number';
-  const distM = distanceToNearestOffice(lat, lng, offices);
-  const isFar = distM !== null && distM > FAR_THRESHOLD_M;
-  const target: CorrectionTarget = {
+function targetOf(p: Row): CorrectionTarget {
+  return {
     effective_id: p.id,
     employee_name: p.employee.full_name,
     kind: p.kind,
     effective_time: p.effective_time,
   };
-  void kind;
+}
+
+// Input-styled time box that opens the modify modal when clicked.
+function TimeBox({
+  p,
+  onModify,
+}: {
+  p: Row;
+  onModify: () => void;
+}) {
   return (
-    <div className="space-y-1">
-      <div className="flex items-center gap-1.5">
-        <span className="font-mono tabular-nums text-slate-900">{formatTime(p.effective_time)}</span>
-        {isFar && <span title={`${Math.round(distM!)}m`}>⚠️</span>}
-        {p.source_request_id && (
-          <span className="text-xs text-emerald-600" title={t('admin.correct.correctedBadge')}>✎</span>
-        )}
-      </div>
-      <div className="text-xs text-slate-500">
-        {hasGps ? (
-          <a
-            href={`https://www.google.com/maps?q=${lat},${lng}`}
-            target="_blank" rel="noopener noreferrer"
-            className="text-emerald-700 hover:underline"
-          >
-            📍 {lat.toFixed(5)}, {lng.toFixed(5)}
-            {distM !== null && ` · ${t('admin.distanceFromOffice', { distance: formatDistance(distM) })}`}
-          </a>
-        ) : (
-          <span className="text-slate-400">{t('admin.noGps')}</span>
-        )}
-      </div>
-      <div className="flex items-center gap-3 text-xs">
-        <button
-          type="button"
-          onClick={() => setModal({ mode: 'modify', target })}
-          className="text-emerald-700 hover:underline"
-        >
-          {t('admin.correct.modify')}
-        </button>
-        <button
-          type="button"
-          onClick={() => setModal({ mode: 'delete', target })}
-          className="text-rose-700 hover:underline"
-        >
-          {t('admin.correct.delete')}
-        </button>
-      </div>
-    </div>
+    <button
+      type="button"
+      onClick={onModify}
+      className="inline-flex items-center px-3 py-1.5 rounded-md bg-white ring-1 ring-slate-200 font-mono tabular-nums text-slate-900 text-sm hover:bg-slate-50 hover:ring-emerald-400 transition"
+      title={p.source_request_id ? '✎' : undefined}
+    >
+      {formatTime(p.effective_time)}
+      {p.source_request_id && <span className="ml-1.5 text-xs text-emerald-600">✎</span>}
+    </button>
+  );
+}
+
+function LocationPill({
+  p,
+  offices,
+  t,
+}: {
+  p: Row;
+  offices: OfficeCoords[];
+  t: (key: string, vars?: Record<string, string | number>) => string;
+}) {
+  const lat = p.punch?.latitude;
+  const lng = p.punch?.longitude;
+  const hasGps = typeof lat === 'number' && typeof lng === 'number';
+  if (!hasGps) {
+    return <span className="inline-flex items-center px-2 py-1 rounded-md bg-slate-100 text-xs text-slate-500">{t('admin.noGps')}</span>;
+  }
+  const distM = distanceToNearestOffice(lat, lng, offices);
+  const isFar = distM !== null && distM > FAR_THRESHOLD_M;
+  return (
+    <a
+      href={`https://www.google.com/maps?q=${lat},${lng}`}
+      target="_blank" rel="noopener noreferrer"
+      className={`inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs hover:opacity-80 transition ${isFar ? 'bg-amber-100 text-amber-800' : 'bg-slate-100 text-slate-700'}`}
+    >
+      📍 {distM !== null ? t('admin.distanceFromOffice', { distance: formatDistance(distM) }) : `${lat.toFixed(4)}, ${lng.toFixed(4)}`}
+    </a>
   );
 }
 
@@ -243,6 +238,32 @@ export function AdminDashboard() {
   const safePage = Math.min(page, totalPages - 1);
   const pagedRows = visibleRows.slice(safePage * pageSize, (safePage + 1) * pageSize);
   const pagedShifts = shifts.slice(safePage * pageSize, (safePage + 1) * pageSize);
+
+  // Per-day totals for the shift view, computed from the FULL shift set so
+  // the day header doesn't shift as you paginate.
+  const todayKey = madridTodayKey();
+  const shiftDayTotalsMs = useMemo(() => {
+    const m = new Map<string, number>();
+    for (const s of shifts) {
+      let add = 0;
+      if (s.in && s.out) {
+        add = new Date(s.out.effective_time).getTime() - new Date(s.in.effective_time).getTime();
+      } else if (s.isOpen && s.in && s.date === todayKey) {
+        add = Math.max(0, Date.now() - new Date(s.in.effective_time).getTime());
+      }
+      m.set(s.date, (m.get(s.date) ?? 0) + add);
+    }
+    return m;
+  }, [shifts, todayKey]);
+
+  const pagedShiftsByDay = useMemo(() => {
+    const m = new Map<string, Shift[]>();
+    for (const s of pagedShifts) {
+      if (!m.has(s.date)) m.set(s.date, []);
+      m.get(s.date)!.push(s);
+    }
+    return Array.from(m.entries());
+  }, [pagedShifts]);
 
   const stats = useMemo(() => {
     const todayKey = madridTodayKey();
@@ -403,149 +424,16 @@ export function AdminDashboard() {
         </div>
       )}
 
-      {visibleRows.length === 0 ? (
-        <div className="app-card px-4 py-8 text-center text-slate-500 text-sm">
-          {rangeFilter === 'day' ? t('admin.noPunchesToday') : t('admin.noPunchesRange')}
-        </div>
-      ) : (
-        <div className="app-card overflow-hidden">
-          <div className="overflow-x-auto">
-          {isSingleEmployee ? (
-            <table className="w-full text-sm">
-              <thead className="bg-slate-50 text-slate-500">
-                <tr>
-                  <th className="text-left px-4 py-2.5 font-medium text-xs uppercase tracking-wider">{t('admin.shifts.dateCol')}</th>
-                  <th className="text-left px-4 py-2.5 font-medium text-xs uppercase tracking-wider">{t('admin.shifts.inCol')}</th>
-                  <th className="text-left px-4 py-2.5 font-medium text-xs uppercase tracking-wider">{t('admin.shifts.outCol')}</th>
-                  <th className="text-left px-4 py-2.5 font-medium text-xs uppercase tracking-wider">{t('admin.shifts.durationCol')}</th>
-                  <th className="text-center px-3 py-2.5 font-medium text-xs uppercase tracking-wider w-10">{t('admin.table.warn')}</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {pagedShifts.map((s, idx) => {
-                  const anchor = s.in ?? s.out!;
-                  const anyFar = [s.in, s.out].some(p => {
-                    if (!p) return false;
-                    const d = distanceToNearestOffice(p.punch?.latitude, p.punch?.longitude, offices);
-                    return d !== null && d > FAR_THRESHOLD_M;
-                  });
-                  const todayKey = madridTodayKey();
-                  let durationLabel = '—';
-                  if (s.in && s.out) {
-                    const ms = new Date(s.out.effective_time).getTime() - new Date(s.in.effective_time).getTime();
-                    const hm = msToHm(ms);
-                    durationLabel = t('admin.stats.hours', { h: hm.h, m: hm.m });
-                  } else if (s.isOpen && s.in && s.date === todayKey) {
-                    const ms = Date.now() - new Date(s.in.effective_time).getTime();
-                    const hm = msToHm(Math.max(0, ms));
-                    durationLabel = t('admin.stats.hours', { h: hm.h, m: hm.m });
-                  }
-                  return (
-                    <tr key={`${anchor.id}-${idx}`} className={`hover:bg-slate-50/50 ${s.isOpen || s.isStrayOut ? 'bg-amber-50/40' : ''}`}>
-                      <td className="px-4 py-3 whitespace-nowrap text-slate-700 align-top">
-                        {formatDate(anchor.effective_time)}
-                      </td>
-                      <td className="px-4 py-3 align-top">{renderShiftPunchCell(s.in, 'in', offices, t, setModal)}</td>
-                      <td className="px-4 py-3 align-top">
-                        {s.in && !s.out
-                          ? <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800">⚠️ {t('admin.shifts.openShift')}</span>
-                          : renderShiftPunchCell(s.out, 'out', offices, t, setModal)}
-                      </td>
-                      <td className="px-4 py-3 whitespace-nowrap text-slate-700 font-mono tabular-nums align-top">{durationLabel}</td>
-                      <td className="px-3 py-3 text-center align-top">
-                        {s.isStrayOut && <span title={t('admin.shifts.strayOut')}>⚠️</span>}
-                        {s.isOpen && <span title={t('admin.shifts.openShift')}>⚠️</span>}
-                        {!s.isOpen && !s.isStrayOut && anyFar && <span>⚠️</span>}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          ) : (
-            <table className="w-full text-sm">
-              <thead className="bg-slate-50 text-slate-500">
-                <tr>
-                  <th className="text-left px-4 py-2.5 font-medium text-xs uppercase tracking-wider">{t('admin.table.time')}</th>
-                  <th className="text-left px-4 py-2.5 font-medium text-xs uppercase tracking-wider">{t('admin.table.person')}</th>
-                  <th className="text-left px-4 py-2.5 font-medium text-xs uppercase tracking-wider">{t('admin.table.status')}</th>
-                  <th className="text-left px-4 py-2.5 font-medium text-xs uppercase tracking-wider">{t('admin.table.info')}</th>
-                  <th className="text-center px-3 py-2.5 font-medium text-xs uppercase tracking-wider w-10">{t('admin.table.warn')}</th>
-                  <th className="text-right px-3 py-2.5 font-medium text-xs uppercase tracking-wider">{t('admin.table.actions')}</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {pagedRows.map(r => {
-                  const lat = r.punch?.latitude;
-                  const lng = r.punch?.longitude;
-                  const hasGps = typeof lat === 'number' && typeof lng === 'number';
-                  const distM = distanceToNearestOffice(lat, lng, offices);
-                  const isFar = distM !== null && distM > FAR_THRESHOLD_M;
-                  const target: CorrectionTarget = {
-                    effective_id: r.id,
-                    employee_name: r.employee.full_name,
-                    kind: r.kind,
-                    effective_time: r.effective_time,
-                  };
-                  return (
-                    <tr key={r.id} className="hover:bg-slate-50/50">
-                      <td className="px-4 py-3 whitespace-nowrap font-mono tabular-nums text-slate-900">
-                        {rangeFilter === 'day' ? formatTime(r.effective_time) : formatDateTime(r.effective_time)}
-                        {r.source_request_id && (
-                          <span className="ml-1.5 text-xs font-sans text-emerald-600" title={t('admin.correct.correctedBadge')}>
-                            ✎
-                          </span>
-                        )}
-                      </td>
-                      <td className="px-4 py-3 whitespace-nowrap text-slate-700">{r.employee.full_name}</td>
-                      <td className="px-4 py-3 whitespace-nowrap">
-                        <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium ${r.kind === 'in' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
-                          <span className="leading-none">{r.kind === 'in' ? '▶' : '■'}</span>
-                          {r.kind === 'in' ? t('punch.in') : t('punch.out')}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-xs text-slate-600">
-                        {hasGps ? (
-                          <a
-                            href={`https://www.google.com/maps?q=${lat},${lng}`}
-                            target="_blank" rel="noopener noreferrer"
-                            className="text-emerald-700 hover:underline"
-                          >
-                            📍 {lat.toFixed(5)}, {lng.toFixed(5)}
-                            {typeof r.punch?.accuracy_m === 'number' && ` · ±${Math.round(r.punch.accuracy_m)}m`}
-                            {distM !== null && ` · ${t('admin.distanceFromOffice', { distance: formatDistance(distM) })}`}
-                          </a>
-                        ) : (
-                          <span className="text-slate-400">{t('admin.noGps')}</span>
-                        )}
-                      </td>
-                      <td className="px-3 py-3 text-center">
-                        {isFar && <span title={`${Math.round(distM!)}m`}>⚠️</span>}
-                      </td>
-                      <td className="px-3 py-3 whitespace-nowrap text-right">
-                        <button
-                          type="button"
-                          onClick={() => setModal({ mode: 'modify', target })}
-                          className="text-xs text-emerald-700 hover:underline mr-3"
-                        >
-                          {t('admin.correct.modify')}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setModal({ mode: 'delete', target })}
-                          className="text-xs text-rose-700 hover:underline"
-                        >
-                          {t('admin.correct.delete')}
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          )}
-          </div>
-          <div className="border-t border-slate-100 px-4 py-3 flex items-center justify-between gap-3 flex-wrap text-sm">
+      {(() => {
+        if (visibleRows.length === 0) {
+          return (
+            <div className="app-card px-4 py-8 text-center text-slate-500 text-sm">
+              {rangeFilter === 'day' ? t('admin.noPunchesToday') : t('admin.noPunchesRange')}
+            </div>
+          );
+        }
+        const paginationContent = (
+          <>
             <label className="flex items-center gap-2">
               <span className="text-slate-600">{t('common.pagination.perPage')}</span>
               <select
@@ -579,9 +467,175 @@ export function AdminDashboard() {
                 {t('common.pagination.next')}
               </button>
             </div>
+          </>
+        );
+
+        if (isSingleEmployee) {
+          return (
+            <div className="space-y-3">
+              {pagedShiftsByDay.map(([dayKey, daysShifts]) => {
+                const anchor = daysShifts[0].in ?? daysShifts[0].out!;
+                const hm = msToHm(shiftDayTotalsMs.get(dayKey) ?? 0);
+                return (
+                  <section key={dayKey} className="app-card overflow-hidden">
+                    <header className="px-4 py-3 border-b border-slate-100 flex items-center justify-between gap-3 bg-slate-50/60">
+                      <div className="text-sm font-semibold text-slate-900">{formatDate(anchor.effective_time)}</div>
+                      <div className="flex items-center gap-1.5 text-sm text-slate-700">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4 text-slate-500" aria-hidden="true">
+                          <circle cx="12" cy="13" r="8" />
+                          <path d="M12 9v4l2 2" />
+                          <path d="M9 2h6" />
+                        </svg>
+                        <span className="font-mono tabular-nums">{t('admin.stats.hours', { h: hm.h, m: hm.m })}</span>
+                      </div>
+                    </header>
+                    <ul className="divide-y divide-slate-100">
+                      {daysShifts.map((s, idx) => {
+                        const locationAnchor = s.in ?? s.out!;
+                        return (
+                          <li key={`${locationAnchor.id}-${idx}`} className="px-4 py-3 flex items-center gap-3 flex-wrap">
+                            <div className="flex items-center gap-2">
+                              {s.in
+                                ? <TimeBox p={s.in} onModify={() => setModal({ mode: 'modify', target: targetOf(s.in!) })} />
+                                : <span className="inline-flex items-center px-3 py-1.5 rounded-md bg-slate-50 ring-1 ring-slate-200 text-slate-400 text-sm">—</span>}
+                              <span className="text-slate-400">–</span>
+                              {s.out
+                                ? <TimeBox p={s.out} onModify={() => setModal({ mode: 'modify', target: targetOf(s.out!) })} />
+                                : (
+                                  <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-amber-100 text-amber-800 text-sm font-medium">
+                                    ⚠️ {t('admin.shifts.openShift')}
+                                  </span>
+                                )}
+                            </div>
+                            <div className="ml-auto flex items-center gap-2 flex-wrap">
+                              <LocationPill p={locationAnchor} offices={offices} t={t} />
+                              {s.in && (
+                                <button
+                                  type="button"
+                                  onClick={() => setModal({ mode: 'delete', target: targetOf(s.in!) })}
+                                  className="h-7 w-7 inline-flex items-center justify-center rounded-md text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition"
+                                  title={`${t('admin.correct.delete')} · ${t('punch.in')}`}
+                                  aria-label={`${t('admin.correct.delete')} ${t('punch.in')}`}
+                                >
+                                  ✕
+                                </button>
+                              )}
+                              {s.out && (
+                                <button
+                                  type="button"
+                                  onClick={() => setModal({ mode: 'delete', target: targetOf(s.out!) })}
+                                  className="h-7 w-7 inline-flex items-center justify-center rounded-md text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition"
+                                  title={`${t('admin.correct.delete')} · ${t('punch.out')}`}
+                                  aria-label={`${t('admin.correct.delete')} ${t('punch.out')}`}
+                                >
+                                  ✕
+                                </button>
+                              )}
+                            </div>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  </section>
+                );
+              })}
+              <div className="app-card px-4 py-3 flex items-center justify-between gap-3 flex-wrap text-sm">
+                {paginationContent}
+              </div>
+            </div>
+          );
+        }
+
+        return (
+          <div className="app-card overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="bg-slate-50 text-slate-500">
+                  <tr>
+                    <th className="text-left px-4 py-2.5 font-medium text-xs uppercase tracking-wider">{t('admin.table.time')}</th>
+                    <th className="text-left px-4 py-2.5 font-medium text-xs uppercase tracking-wider">{t('admin.table.person')}</th>
+                    <th className="text-left px-4 py-2.5 font-medium text-xs uppercase tracking-wider">{t('admin.table.status')}</th>
+                    <th className="text-left px-4 py-2.5 font-medium text-xs uppercase tracking-wider">{t('admin.table.info')}</th>
+                    <th className="text-center px-3 py-2.5 font-medium text-xs uppercase tracking-wider w-10">{t('admin.table.warn')}</th>
+                    <th className="text-right px-3 py-2.5 font-medium text-xs uppercase tracking-wider">{t('admin.table.actions')}</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {pagedRows.map(r => {
+                    const lat = r.punch?.latitude;
+                    const lng = r.punch?.longitude;
+                    const hasGps = typeof lat === 'number' && typeof lng === 'number';
+                    const distM = distanceToNearestOffice(lat, lng, offices);
+                    const isFar = distM !== null && distM > FAR_THRESHOLD_M;
+                    const target: CorrectionTarget = {
+                      effective_id: r.id,
+                      employee_name: r.employee.full_name,
+                      kind: r.kind,
+                      effective_time: r.effective_time,
+                    };
+                    return (
+                      <tr key={r.id} className="hover:bg-slate-50/50">
+                        <td className="px-4 py-3 whitespace-nowrap font-mono tabular-nums text-slate-900">
+                          {rangeFilter === 'day' ? formatTime(r.effective_time) : formatDateTime(r.effective_time)}
+                          {r.source_request_id && (
+                            <span className="ml-1.5 text-xs font-sans text-emerald-600" title={t('admin.correct.correctedBadge')}>
+                              ✎
+                            </span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3 whitespace-nowrap text-slate-700">{r.employee.full_name}</td>
+                        <td className="px-4 py-3 whitespace-nowrap">
+                          <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium ${r.kind === 'in' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
+                            <span className="leading-none">{r.kind === 'in' ? '▶' : '■'}</span>
+                            {r.kind === 'in' ? t('punch.in') : t('punch.out')}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-xs text-slate-600">
+                          {hasGps ? (
+                            <a
+                              href={`https://www.google.com/maps?q=${lat},${lng}`}
+                              target="_blank" rel="noopener noreferrer"
+                              className="text-emerald-700 hover:underline"
+                            >
+                              📍 {lat.toFixed(5)}, {lng.toFixed(5)}
+                              {typeof r.punch?.accuracy_m === 'number' && ` · ±${Math.round(r.punch.accuracy_m)}m`}
+                              {distM !== null && ` · ${t('admin.distanceFromOffice', { distance: formatDistance(distM) })}`}
+                            </a>
+                          ) : (
+                            <span className="text-slate-400">{t('admin.noGps')}</span>
+                          )}
+                        </td>
+                        <td className="px-3 py-3 text-center">
+                          {isFar && <span title={`${Math.round(distM!)}m`}>⚠️</span>}
+                        </td>
+                        <td className="px-3 py-3 whitespace-nowrap text-right">
+                          <button
+                            type="button"
+                            onClick={() => setModal({ mode: 'modify', target })}
+                            className="text-xs text-emerald-700 hover:underline mr-3"
+                          >
+                            {t('admin.correct.modify')}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setModal({ mode: 'delete', target })}
+                            className="text-xs text-rose-700 hover:underline"
+                          >
+                            {t('admin.correct.delete')}
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+            <div className="border-t border-slate-100 px-4 py-3 flex items-center justify-between gap-3 flex-wrap text-sm">
+              {paginationContent}
+            </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {modal && (
         <PunchCorrectionModal
