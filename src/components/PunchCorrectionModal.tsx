@@ -1,0 +1,149 @@
+// src/components/PunchCorrectionModal.tsx
+import { useState } from 'react';
+import type { FormEvent } from 'react';
+import { adminCorrectPunch } from '../lib/api';
+import type { ApiError } from '../lib/api';
+import { useTranslation } from '../i18n/LanguageContext';
+import { formatDateTime } from '../lib/time';
+
+export interface CorrectionTarget {
+  effective_id: string;
+  employee_name: string;
+  kind: 'in' | 'out';
+  effective_time: string;   // ISO
+}
+
+interface Props {
+  mode: 'add' | 'modify' | 'delete';
+  target?: CorrectionTarget;                        // modify/delete 必填
+  employees: { id: string; full_name: string }[];   // add 用
+  onClose: () => void;
+  onDone: () => void;
+}
+
+// ISO → datetime-local 输入值（浏览器本地时区，与读回时 new Date(value) 语义一致）
+function toLocalInput(iso: string): string {
+  const d = new Date(iso);
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+export function PunchCorrectionModal({ mode, target, employees, onClose, onDone }: Props) {
+  const { t } = useTranslation();
+  const [employeeId, setEmployeeId] = useState('');
+  const [kind, setKind] = useState<'in' | 'out'>(target?.kind ?? 'in');
+  const [datetime, setDatetime] = useState(target ? toLocalInput(target.effective_time) : '');
+  const [reason, setReason] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  const titleKey =
+    mode === 'add' ? 'admin.correct.modalAddTitle'
+    : mode === 'modify' ? 'admin.correct.modalModifyTitle'
+    : 'admin.correct.modalDeleteTitle';
+
+  async function submit(e: FormEvent) {
+    e.preventDefault();
+    setBusy(true); setErr(null);
+    try {
+      if (mode === 'add') {
+        await adminCorrectPunch({
+          action: 'add', employee_id: employeeId, kind,
+          time: new Date(datetime).toISOString(), reason,
+        });
+      } else if (mode === 'modify') {
+        await adminCorrectPunch({
+          action: 'modify', target_effective_id: target!.effective_id, kind,
+          time: new Date(datetime).toISOString(), reason,
+        });
+      } else {
+        await adminCorrectPunch({
+          action: 'delete', target_effective_id: target!.effective_id, reason,
+        });
+      }
+      onDone();
+    } catch (e: unknown) {
+      const apiErr = e as ApiError;
+      const known = t(`admin.correct.errors.${apiErr.code}`, { code: apiErr.code });
+      setErr(known.startsWith('admin.correct.errors.')
+        ? t('admin.correct.errors.UNKNOWN', { code: apiErr.code })
+        : known);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 px-4" onClick={onClose}>
+      <div className="app-card w-full max-w-md p-5 space-y-4" onClick={e => e.stopPropagation()}>
+        <h2 className="text-lg font-bold text-slate-900">{t(titleKey)}</h2>
+
+        <form onSubmit={submit} className="space-y-4">
+          {mode === 'add' && (
+            <label className="block space-y-1.5">
+              <span className="text-sm font-medium text-slate-700">{t('admin.correct.employeeLabel')}</span>
+              <select required value={employeeId} onChange={e => setEmployeeId(e.target.value)} className="app-input">
+                <option value="">{t('admin.correct.selectEmployee')}</option>
+                {employees.map(emp => <option key={emp.id} value={emp.id}>{emp.full_name}</option>)}
+              </select>
+            </label>
+          )}
+
+          {(mode === 'modify' || mode === 'delete') && target && (
+            <div className="text-sm text-slate-600">
+              <span className="text-slate-500">{t('admin.correct.employeeLabel')}: </span>
+              {target.employee_name}
+            </div>
+          )}
+
+          {mode === 'delete' && target && (
+            <div className="rounded-lg bg-slate-50 px-3 py-2 text-sm text-slate-700">
+              {target.kind === 'in' ? t('punch.in') : t('punch.out')} · {formatDateTime(target.effective_time)}
+            </div>
+          )}
+
+          {(mode === 'add' || mode === 'modify') && (
+            <>
+              <div className="space-y-1.5">
+                <span className="text-sm font-medium text-slate-700">{t('admin.correct.typeLabel')}</span>
+                <div className="grid grid-cols-2 gap-2 rounded-lg bg-slate-100 p-1">
+                  {(['in', 'out'] as const).map(k => (
+                    <button type="button" key={k} onClick={() => setKind(k)}
+                      className={`py-2 rounded-md text-sm font-medium transition ${kind === k ? 'bg-white shadow text-slate-900' : 'text-slate-600'}`}>
+                      {t(`punch.${k}`)}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <label className="block space-y-1.5">
+                <span className="text-sm font-medium text-slate-700">{t('admin.correct.timeLabel')}</span>
+                <input type="datetime-local" required value={datetime} onChange={e => setDatetime(e.target.value)} className="app-input" />
+              </label>
+            </>
+          )}
+
+          <label className="block space-y-1.5">
+            <span className="text-sm font-medium text-slate-700">{t('admin.correct.reasonLabel')}</span>
+            <textarea required value={reason} onChange={e => setReason(e.target.value)} rows={3}
+              placeholder={t('admin.correct.reasonPlaceholder')} className="app-input resize-none" />
+          </label>
+
+          {err && (
+            <div className="rounded-lg bg-rose-50 ring-1 ring-rose-200 px-3 py-2 text-sm text-rose-700">{err}</div>
+          )}
+
+          <div className="flex gap-2">
+            <button type="button" onClick={onClose}
+              className="flex-1 py-2 rounded-lg bg-white ring-1 ring-slate-300 text-slate-700 font-medium hover:bg-slate-50 transition">
+              {t('admin.correct.cancel')}
+            </button>
+            <button type="submit" disabled={busy}
+              className={`flex-1 py-2 rounded-lg text-white font-medium disabled:opacity-60 transition ${mode === 'delete' ? 'bg-rose-600 hover:bg-rose-700' : 'bg-emerald-600 hover:bg-emerald-700'}`}>
+              {busy ? t('admin.correct.saving') : mode === 'delete' ? t('admin.correct.confirmDelete') : t('admin.correct.save')}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
