@@ -76,3 +76,14 @@ export function rejectEdit(request_id: string, note: string) {
 export function exportMonthCsv(month: string) {
   return invoke<string>('export-month', null, 'GET', { month });
 }
+
+export function adminCorrectPunch(args: {
+  action: 'add' | 'modify' | 'delete';
+  reason: string;
+  target_effective_id?: string;
+  employee_id?: string;
+  kind?: 'in' | 'out';
+  time?: string;
+}) {
+  return invoke<{ ok: true }>('admin-correct-punch', args);
+}

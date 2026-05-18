@@ -25,6 +25,8 @@ export interface EffectivePunch {
   effective_time: string;
   source_punch_id: string | null;
   source_request_id: string | null;
+  superseded_at: string | null;
+  superseded_by_request_id: string | null;
 }
 
 export interface PunchEditRequest {
@@ -39,4 +41,7 @@ export interface PunchEditRequest {
   reviewed_at: string | null;
   review_note: string | null;
   created_at: string;
+  created_by: string | null;
+  action: 'add' | 'modify' | 'delete';
+  target_effective_id: string | null;
 }
