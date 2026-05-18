@@ -13,6 +13,9 @@ import type { EffectivePunch, Employee } from '../lib/types';
 
 type RangeFilter = 'day' | 'last7' | 'last30';
 
+const PAGE_SIZES = [10, 50, 100] as const;
+type PageSize = typeof PAGE_SIZES[number];
+
 interface Row extends EffectivePunch {
   employee: Pick<Employee, 'full_name' | 'email'>;
   punch: { latitude: number | null; longitude: number | null; accuracy_m: number | null } | null;
@@ -60,7 +63,12 @@ export function AdminDashboard() {
   const [filterEmployeeId, setFilterEmployeeId] = useState<string>('all');
   const [rangeFilter, setRangeFilter] = useState<RangeFilter>('day');
   const [selectedDate, setSelectedDate] = useState<string>(madridTodayKey());
+  const [pageSize, setPageSize] = useState<PageSize>(10);
+  const [page, setPage] = useState(0);
   const [modal, setModal] = useState<ModalState | null>(null);
+
+  // Reset to first page when filter inputs or page size change.
+  useEffect(() => { setPage(0); }, [rangeFilter, selectedDate, filterEmployeeId, pageSize]);
 
   useEffect(() => {
     supabase.from('office_locations').select('latitude, longitude').eq('active', true)
@@ -109,6 +117,10 @@ export function AdminDashboard() {
   const visibleRows = filterEmployeeId === 'all'
     ? rows
     : rows.filter(r => r.employee_id === filterEmployeeId);
+
+  const totalPages = Math.max(1, Math.ceil(visibleRows.length / pageSize));
+  const safePage = Math.min(page, totalPages - 1);
+  const pagedRows = visibleRows.slice(safePage * pageSize, (safePage + 1) * pageSize);
 
   const stats = useMemo(() => {
     const todayKey = madridTodayKey();
@@ -233,7 +245,8 @@ export function AdminDashboard() {
           {rangeFilter === 'day' ? t('admin.noPunchesToday') : t('admin.noPunchesRange')}
         </div>
       ) : rangeFilter !== 'day' ? null : (
-        <div className="app-card overflow-x-auto">
+        <div className="app-card overflow-hidden">
+          <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-slate-50 text-slate-500">
               <tr>
@@ -246,7 +259,7 @@ export function AdminDashboard() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {visibleRows.map(r => {
+              {pagedRows.map(r => {
                 const lat = r.punch?.latitude;
                 const lng = r.punch?.longitude;
                 const hasGps = typeof lat === 'number' && typeof lng === 'number';
@@ -314,6 +327,42 @@ export function AdminDashboard() {
               })}
             </tbody>
           </table>
+          </div>
+          <div className="border-t border-slate-100 px-4 py-3 flex items-center justify-between gap-3 flex-wrap text-sm">
+            <label className="flex items-center gap-2">
+              <span className="text-slate-600">{t('common.pagination.perPage')}</span>
+              <select
+                value={pageSize}
+                onChange={e => setPageSize(Number(e.target.value) as PageSize)}
+                className="px-2 py-1 rounded-md bg-white ring-1 ring-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
+              >
+                {PAGE_SIZES.map(n => (
+                  <option key={n} value={n}>{n}</option>
+                ))}
+              </select>
+            </label>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setPage(p => Math.max(0, p - 1))}
+                disabled={safePage <= 0}
+                className="px-3 py-1 rounded-md ring-1 ring-slate-300 text-slate-700 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-50"
+              >
+                {t('common.pagination.prev')}
+              </button>
+              <span className="text-xs text-slate-500 tabular-nums min-w-max">
+                {t('common.pagination.pageOf', { page: safePage + 1, total: totalPages })}
+              </span>
+              <button
+                type="button"
+                onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))}
+                disabled={safePage >= totalPages - 1}
+                className="px-3 py-1 rounded-md ring-1 ring-slate-300 text-slate-700 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-50"
+              >
+                {t('common.pagination.next')}
+              </button>
+            </div>
+          </div>
         </div>
       )}
 

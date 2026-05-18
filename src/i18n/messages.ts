@@ -19,6 +19,12 @@ interface Messages {
   common: {
     back: string;
     loading: string;
+    pagination: {
+      perPage: string;
+      prev: string;
+      next: string;
+      pageOf: string;    // uses {page}, {total}
+    };
   };
   login: {
     title: string;
@@ -60,12 +66,6 @@ interface Messages {
     pickDate: string;
     total: string;       // uses {h}, {m}
     rangeTotal: string;  // uses {h}, {m}
-    pagination: {
-      perPage: string;
-      prev: string;
-      next: string;
-      pageOf: string;    // uses {page}, {total}
-    };
   };
   editRequest: {
     title: string;
@@ -152,7 +152,11 @@ interface Messages {
 
 export const MESSAGES: Record<Lang, Messages> = {
   zh: {
-    common: { back: '← 返回', loading: '加载中…' },
+    common: {
+      back: '← 返回',
+      loading: '加载中…',
+      pagination: { perPage: '每页', prev: '上一页', next: '下一页', pageOf: '第 {page} / {total} 页' },
+    },
     login: {
       title: '登录',
       email: '邮箱',
@@ -199,12 +203,6 @@ export const MESSAGES: Record<Lang, Messages> = {
       pickDate: '选择日期',
       total: '共 {h} 小时 {m} 分',
       rangeTotal: '合计 {h} 小时 {m} 分',
-      pagination: {
-        perPage: '每页',
-        prev: '上一页',
-        next: '下一页',
-        pageOf: '第 {page} / {total} 页',
-      },
     },
     editRequest: {
       title: '补卡申请',
@@ -301,7 +299,11 @@ export const MESSAGES: Record<Lang, Messages> = {
     language: { label: '语言' },
   },
   en: {
-    common: { back: '← Back', loading: 'Loading…' },
+    common: {
+      back: '← Back',
+      loading: 'Loading…',
+      pagination: { perPage: 'Per page', prev: 'Previous', next: 'Next', pageOf: 'Page {page} of {total}' },
+    },
     login: {
       title: 'Log in',
       email: 'Email',
@@ -348,12 +350,6 @@ export const MESSAGES: Record<Lang, Messages> = {
       pickDate: 'Pick date',
       total: 'Total {h}h {m}m',
       rangeTotal: 'Total {h}h {m}m',
-      pagination: {
-        perPage: 'Per page',
-        prev: 'Previous',
-        next: 'Next',
-        pageOf: 'Page {page} of {total}',
-      },
     },
     editRequest: {
       title: 'Punch correction request',
@@ -450,7 +446,11 @@ export const MESSAGES: Record<Lang, Messages> = {
     language: { label: 'Language' },
   },
   es: {
-    common: { back: '← Volver', loading: 'Cargando…' },
+    common: {
+      back: '← Volver',
+      loading: 'Cargando…',
+      pagination: { perPage: 'Por página', prev: 'Anterior', next: 'Siguiente', pageOf: 'Página {page} de {total}' },
+    },
     login: {
       title: 'Iniciar sesión',
       email: 'Correo electrónico',
@@ -497,12 +497,6 @@ export const MESSAGES: Record<Lang, Messages> = {
       pickDate: 'Elegir fecha',
       total: 'Total {h} h {m} min',
       rangeTotal: 'Total {h} h {m} min',
-      pagination: {
-        perPage: 'Por página',
-        prev: 'Anterior',
-        next: 'Siguiente',
-        pageOf: 'Página {page} de {total}',
-      },
     },
     editRequest: {
       title: 'Solicitud de corrección',

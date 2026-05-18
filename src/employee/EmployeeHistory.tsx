@@ -160,7 +160,7 @@ export function EmployeeHistory() {
 
           <div className="app-card px-4 py-3 flex items-center justify-between gap-3 flex-wrap text-sm">
             <label className="flex items-center gap-2">
-              <span className="text-slate-600">{t('history.pagination.perPage')}</span>
+              <span className="text-slate-600">{t('common.pagination.perPage')}</span>
               <select
                 value={pageSize}
                 onChange={e => setPageSize(Number(e.target.value) as PageSize)}
@@ -178,10 +178,10 @@ export function EmployeeHistory() {
                 disabled={safePage <= 0}
                 className="px-3 py-1 rounded-md ring-1 ring-slate-300 text-slate-700 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-50"
               >
-                {t('history.pagination.prev')}
+                {t('common.pagination.prev')}
               </button>
               <span className="text-xs text-slate-500 tabular-nums min-w-max">
-                {t('history.pagination.pageOf', { page: safePage + 1, total: totalPages })}
+                {t('common.pagination.pageOf', { page: safePage + 1, total: totalPages })}
               </span>
               <button
                 type="button"
@@ -189,7 +189,7 @@ export function EmployeeHistory() {
                 disabled={safePage >= totalPages - 1}
                 className="px-3 py-1 rounded-md ring-1 ring-slate-300 text-slate-700 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-50"
               >
-                {t('history.pagination.next')}
+                {t('common.pagination.next')}
               </button>
             </div>
           </div>
