@@ -493,8 +493,9 @@ export function AdminDashboard() {
                       {daysShifts.map((s, idx) => {
                         const rowKeyAnchor = s.in ?? s.out!;
                         return (
-                          <li key={`${rowKeyAnchor.id}-${idx}`} className="px-4 py-3 flex items-center gap-3 flex-wrap">
-                            <div className="flex items-center gap-2">
+                          <li key={`${rowKeyAnchor.id}-${idx}`} className="px-4 py-3">
+                            <div className="grid grid-cols-[auto_auto_auto] gap-x-2 gap-y-1.5 items-start w-fit max-w-full">
+                              {/* row 1: in / dash / out */}
                               {s.in ? (
                                 <div className="flex items-center gap-1">
                                   <TimeBox p={s.in} onModify={() => setModal({ mode: 'modify', target: targetOf(s.in!) })} />
@@ -511,7 +512,7 @@ export function AdminDashboard() {
                               ) : (
                                 <span className="inline-flex items-center px-3 py-1.5 rounded-md bg-slate-50 ring-1 ring-slate-200 text-slate-400 text-sm">—</span>
                               )}
-                              <span className="text-slate-400">–</span>
+                              <span className="text-slate-400 self-center px-1">–</span>
                               {s.out ? (
                                 <div className="flex items-center gap-1">
                                   <TimeBox p={s.out} onModify={() => setModal({ mode: 'modify', target: targetOf(s.out!) })} />
@@ -530,10 +531,14 @@ export function AdminDashboard() {
                                   ⚠️ {t('admin.shifts.openShift')}
                                 </span>
                               )}
-                            </div>
-                            <div className="ml-auto flex items-center gap-2 flex-wrap justify-end">
-                              {s.in && <LocationPill p={s.in} offices={offices} t={t} />}
-                              {s.out && <LocationPill p={s.out} offices={offices} t={t} />}
+                              {/* row 2: in-location / (gap) / out-location */}
+                              <div className="justify-self-start">
+                                {s.in && <LocationPill p={s.in} offices={offices} t={t} />}
+                              </div>
+                              <span />
+                              <div className="justify-self-start">
+                                {s.out && <LocationPill p={s.out} offices={offices} t={t} />}
+                              </div>
                             </div>
                           </li>
                         );
