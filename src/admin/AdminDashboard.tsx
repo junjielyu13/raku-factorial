@@ -182,7 +182,7 @@ export function AdminDashboard() {
   const [offices, setOffices] = useState<OfficeCoords[]>([]);
   const [employees, setEmployees] = useState<EmployeeOption[]>([]);
   const [filterEmployeeId, setFilterEmployeeId] = useState<string>('all');
-  const [rangeFilter, setRangeFilter] = useState<RangeFilter>('day');
+  const [rangeFilter, setRangeFilter] = useState<RangeFilter>('last7');
   const [selectedDate, setSelectedDate] = useState<string>(madridTodayKey());
   const [customStart, setCustomStart] = useState<string>(() => daysAgoKey(7));
   const [customEnd, setCustomEnd] = useState<string>(madridTodayKey());
