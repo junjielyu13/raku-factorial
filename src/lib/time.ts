@@ -45,6 +45,15 @@ export function madridTodayKey(): string {
   return madridDayKeyOf(new Date());
 }
 
+/** Minutes since midnight (0–1439) in Europe/Madrid for an ISO timestamp. */
+export function madridMinutesOfDay(iso: string): number {
+  const parts = new Intl.DateTimeFormat('sv-SE', {
+    timeZone: 'Europe/Madrid', hour: '2-digit', minute: '2-digit', hour12: false,
+  }).formatToParts(new Date(iso));
+  const get = (t: string) => +parts.find(p => p.type === t)!.value;
+  return get('hour') * 60 + get('minute');
+}
+
 /** YYYY-MM-DD in Europe/Madrid for an ISO timestamp or Date. */
 export function madridDayKeyOf(iso: string | Date): string {
   const parts = new Intl.DateTimeFormat('sv-SE', {

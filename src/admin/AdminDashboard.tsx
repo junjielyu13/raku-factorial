@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
-import { formatTime, formatDate, madridDayRange, madridDayKeyOf, madridTodayKey } from '../lib/time';
+import { formatTime, formatDate, madridDayRange, madridDayKeyOf, madridTodayKey, madridMinutesOfDay } from '../lib/time';
 import { workedMsForDay, msToHm, pairShifts } from '../lib/worked';
 import type { ShiftPair } from '../lib/worked';
 import { useTranslation } from '../i18n/LanguageContext';
@@ -59,6 +59,19 @@ function pairShiftsByEmployee(rows: Row[]): Shift[] {
 }
 
 const FAR_THRESHOLD_M = 2000;
+
+// Expected punch-time windows (Europe/Madrid, [from, to] minutes since midnight,
+// both ends inclusive). A punch outside every window for its kind is flagged.
+const hm = (h: number, m: number) => h * 60 + m;
+const PUNCH_WINDOWS: Record<'in' | 'out', [number, number][]> = {
+  in:  [[hm(12, 20), hm(12, 45)], [hm(19, 20), hm(19, 45)]],
+  out: [[hm(16, 0), hm(17, 0)], [hm(23, 0), hm(24, 0)]],
+};
+
+function isPunchTimeNormal(kind: 'in' | 'out', iso: string): boolean {
+  const mins = madridMinutesOfDay(iso);
+  return PUNCH_WINDOWS[kind].some(([lo, hi]) => mins >= lo && mins <= hi);
+}
 
 function haversineMeters(lat1: number, lng1: number, lat2: number, lng2: number): number {
   const R = 6_371_000;
@@ -140,6 +153,22 @@ function LocationPill({
     >
       📍 {distM !== null ? t('admin.distanceFromOffice', { distance: formatDistance(distM) }) : `${lat.toFixed(4)}, ${lng.toFixed(4)}`}
     </a>
+  );
+}
+
+// Amber pill shown when a punch falls outside its expected time windows.
+function TimeWarnPill({
+  p,
+  t,
+}: {
+  p: Row;
+  t: (key: string, vars?: Record<string, string | number>) => string;
+}) {
+  if (isPunchTimeNormal(p.kind, p.effective_time)) return null;
+  return (
+    <span className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-amber-100 text-amber-800 text-xs">
+      ⚠️ {t('admin.abnormalTime')}
+    </span>
   );
 }
 
@@ -510,11 +539,13 @@ export function AdminDashboard() {
                     ⚠️ {t('admin.shifts.openShift')}
                   </button>
                 )}
-                <div className="justify-self-start">
+                <div className="justify-self-start flex flex-wrap gap-1">
+                  {s.in && <TimeWarnPill p={s.in} t={t} />}
                   {s.in && <LocationPill p={s.in} offices={offices} t={t} />}
                 </div>
                 <span />
-                <div className="justify-self-start">
+                <div className="justify-self-start flex flex-wrap gap-1">
+                  {s.out && <TimeWarnPill p={s.out} t={t} />}
                   {s.out && <LocationPill p={s.out} offices={offices} t={t} />}
                 </div>
               </div>

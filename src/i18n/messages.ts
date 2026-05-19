@@ -91,6 +91,7 @@ interface Messages {
     dateLabel: string;
     noGps: string;
     distanceFromOffice: string; // uses {distance}
+    abnormalTime: string;
     filterAll: string;
     filterLabel: string;
     rangeLabel: string;
@@ -256,6 +257,7 @@ export const MESSAGES: Record<Lang, Messages> = {
       noPunchesToday: '今天还没人打卡',
       noGps: '📍 无 GPS 数据',
       distanceFromOffice: '距离办公点 {distance}',
+      abnormalTime: '打卡时间不正常',
       filterAll: '全部员工',
       filterLabel: '员工筛选',
       rangeLabel: '范围',
@@ -424,6 +426,7 @@ export const MESSAGES: Record<Lang, Messages> = {
       noPunchesToday: 'No punches today',
       noGps: '📍 No GPS data',
       distanceFromOffice: '{distance} from office',
+      abnormalTime: 'Unusual punch time',
       filterAll: 'All employees',
       filterLabel: 'Filter by employee',
       rangeLabel: 'Range',
@@ -592,6 +595,7 @@ export const MESSAGES: Record<Lang, Messages> = {
       noPunchesToday: 'Sin fichajes hoy',
       noGps: '📍 Sin datos GPS',
       distanceFromOffice: '{distance} de la oficina',
+      abnormalTime: 'Hora de fichaje inusual',
       filterAll: 'Todos los empleados',
       filterLabel: 'Filtrar por empleado',
       rangeLabel: 'Rango',
