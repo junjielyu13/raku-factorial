@@ -57,10 +57,12 @@ export function punchIn(args: PunchInArgs) {
 }
 
 export function submitEditRequest(args: {
-  requested_kind: 'in' | 'out';
-  requested_time: string;
+  action?: 'add' | 'modify' | 'delete';
+  requested_kind?: 'in' | 'out';
+  requested_time?: string;
   reason: string;
   original_punch_id?: string;
+  target_effective_id?: string;
 }) {
   return invoke<{ ok: true }>('submit-edit-request', args);
 }

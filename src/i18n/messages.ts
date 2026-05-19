@@ -74,6 +74,12 @@ interface Messages {
     reason: string;
     submit: string;
     submitting: string;
+    requestModifyTitle: string;
+    requestDeleteTitle: string;
+    requestModifyAction: string;
+    requestDeleteAction: string;
+    cancel: string;
+    pendingHint: string;
     errors: Record<string, string>;
   };
   admin: {
@@ -222,11 +228,22 @@ export const MESSAGES: Record<Lang, Messages> = {
       reason: '原因',
       submit: '提交',
       submitting: '提交中…',
+      requestModifyTitle: '申请修改打卡时间',
+      requestDeleteTitle: '申请删除打卡',
+      requestModifyAction: '提交修改申请',
+      requestDeleteAction: '提交删除申请',
+      cancel: '取消',
+      pendingHint: '提交后需等待管理员审批。',
       errors: {
         FUTURE_TIME: '时间不能是未来。',
         BAD_REASON: '原因不能为空。',
         BAD_TIME: '时间格式不正确。',
         BAD_KIND: '类型不正确。',
+        BAD_ACTION: '操作类型不正确。',
+        BAD_TARGET: '未找到目标打卡。',
+        TARGET_NOT_FOUND: '未找到目标打卡。',
+        NOT_OWNER: '只能申请修改自己的打卡。',
+        ALREADY_SUPERSEDED: '这条打卡已被修改过，请刷新后重试。',
         UNKNOWN: '提交失败：{code}',
       },
     },
@@ -379,11 +396,22 @@ export const MESSAGES: Record<Lang, Messages> = {
       reason: 'Reason',
       submit: 'Submit',
       submitting: 'Submitting…',
+      requestModifyTitle: 'Request time change',
+      requestDeleteTitle: 'Request punch deletion',
+      requestModifyAction: 'Submit change request',
+      requestDeleteAction: 'Submit deletion request',
+      cancel: 'Cancel',
+      pendingHint: 'Your request will await admin approval.',
       errors: {
         FUTURE_TIME: 'Time cannot be in the future.',
         BAD_REASON: 'Reason is required.',
         BAD_TIME: 'Invalid time format.',
         BAD_KIND: 'Invalid type.',
+        BAD_ACTION: 'Invalid action.',
+        BAD_TARGET: 'Target punch not found.',
+        TARGET_NOT_FOUND: 'Target punch not found.',
+        NOT_OWNER: 'You can only request changes to your own punches.',
+        ALREADY_SUPERSEDED: 'This punch was already corrected. Refresh and try again.',
         UNKNOWN: 'Submit failed: {code}',
       },
     },
@@ -536,11 +564,22 @@ export const MESSAGES: Record<Lang, Messages> = {
       reason: 'Motivo',
       submit: 'Enviar',
       submitting: 'Enviando…',
+      requestModifyTitle: 'Solicitar cambio de hora',
+      requestDeleteTitle: 'Solicitar borrado del fichaje',
+      requestModifyAction: 'Enviar solicitud de cambio',
+      requestDeleteAction: 'Enviar solicitud de borrado',
+      cancel: 'Cancelar',
+      pendingHint: 'La solicitud quedará pendiente de aprobación.',
       errors: {
         FUTURE_TIME: 'La hora no puede ser futura.',
         BAD_REASON: 'El motivo es obligatorio.',
         BAD_TIME: 'Formato de hora no válido.',
         BAD_KIND: 'Tipo no válido.',
+        BAD_ACTION: 'Acción no válida.',
+        BAD_TARGET: 'No se encuentra el fichaje.',
+        TARGET_NOT_FOUND: 'No se encuentra el fichaje.',
+        NOT_OWNER: 'Solo puedes solicitar cambios en tus propios fichajes.',
+        ALREADY_SUPERSEDED: 'Este fichaje ya fue corregido. Actualiza y vuelve a intentarlo.',
         UNKNOWN: 'Envío fallido: {code}',
       },
     },
