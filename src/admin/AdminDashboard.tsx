@@ -64,13 +64,24 @@ const FAR_THRESHOLD_M = 2000;
 // both ends inclusive). A punch outside every window for its kind is flagged.
 const hm = (h: number, m: number) => h * 60 + m;
 const PUNCH_WINDOWS: Record<'in' | 'out', [number, number][]> = {
-  in:  [[hm(12, 20), hm(12, 45)], [hm(19, 20), hm(19, 45)]],
+  in:  [[hm(12, 30), hm(12, 45)], [hm(19, 30), hm(19, 45)]],
   out: [[hm(16, 0), hm(17, 0)], [hm(23, 0), hm(24, 0)]],
 };
 
 function isPunchTimeNormal(kind: 'in' | 'out', iso: string): boolean {
   const mins = madridMinutesOfDay(iso);
   return PUNCH_WINDOWS[kind].some(([lo, hi]) => mins >= lo && mins <= hi);
+}
+
+// "HH:MM" for a minutes-since-midnight value.
+function fmtMinutes(m: number): string {
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${pad(Math.floor(m / 60))}:${pad(m % 60)}`;
+}
+
+// "12:30–12:45 / 19:30–19:45" for a punch kind's windows.
+function describeWindows(kind: 'in' | 'out'): string {
+  return PUNCH_WINDOWS[kind].map(([lo, hi]) => `${fmtMinutes(lo)}–${fmtMinutes(hi)}`).join(' / ');
 }
 
 function haversineMeters(lat1: number, lng1: number, lat2: number, lng2: number): number {
@@ -174,6 +185,54 @@ function TimeWarnPill({
   );
 }
 
+// Read-only modal describing the punch time + location rules.
+function RulesModal({
+  t,
+  onClose,
+}: {
+  t: (key: string, vars?: Record<string, string | number>) => string;
+  onClose: () => void;
+}) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 px-4" onClick={onClose}>
+      <div className="app-card w-full max-w-md p-5 space-y-4" onClick={e => e.stopPropagation()}>
+        <h2 className="text-lg font-bold text-slate-900">{t('admin.rules.title')}</h2>
+
+        <div className="space-y-1.5">
+          <div className="text-sm font-medium text-slate-700">{t('admin.rules.timeTitle')}</div>
+          <div className="rounded-lg bg-slate-50 px-3 py-2 text-sm text-slate-700 space-y-1">
+            <div className="flex justify-between gap-3">
+              <span className="text-slate-500">{t('admin.rules.inLabel')}</span>
+              <span className="font-mono tabular-nums">{describeWindows('in')}</span>
+            </div>
+            <div className="flex justify-between gap-3">
+              <span className="text-slate-500">{t('admin.rules.outLabel')}</span>
+              <span className="font-mono tabular-nums">{describeWindows('out')}</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="space-y-1.5">
+          <div className="text-sm font-medium text-slate-700">{t('admin.rules.locationTitle')}</div>
+          <div className="rounded-lg bg-slate-50 px-3 py-2 text-sm text-slate-700">
+            📍 {t('admin.rules.locationDesc', { distance: formatDistance(FAR_THRESHOLD_M) })}
+          </div>
+        </div>
+
+        <div className="flex">
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex-1 py-2 rounded-lg bg-white ring-1 ring-slate-300 text-slate-700 font-medium hover:bg-slate-50 transition"
+          >
+            {t('admin.rules.close')}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function AdminDashboard() {
   const { t } = useTranslation();
   const [rows, setRows] = useState<Row[]>([]);
@@ -187,6 +246,7 @@ export function AdminDashboard() {
   const [pageSize, setPageSize] = useState<PageSize>(10);
   const [page, setPage] = useState(0);
   const [modal, setModal] = useState<ModalState | null>(null);
+  const [showRules, setShowRules] = useState(false);
 
   // Reset to first page when filter inputs or page size change.
   useEffect(() => {
@@ -355,6 +415,9 @@ export function AdminDashboard() {
           <div className="flex items-center gap-2 flex-wrap">
             <Link to="/admin/approvals" className="app-btn-ghost">{t('admin.approvalsLink')}</Link>
             <Link to="/admin/export" className="app-btn-ghost">{t('admin.exportLink')}</Link>
+            <button type="button" onClick={() => setShowRules(true)} className="app-btn-ghost">
+              {t('admin.rules.button')}
+            </button>
           </div>
           <Link to="/" className="text-sm text-emerald-700 hover:underline">
             {t('admin.employeeViewLink')} →
@@ -644,6 +707,8 @@ export function AdminDashboard() {
           onDone={() => { setModal(null); fetchPunches(); }}
         />
       ))}
+
+      {showRules && <RulesModal t={t} onClose={() => setShowRules(false)} />}
     </div>
   );
 }

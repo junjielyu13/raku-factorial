@@ -162,6 +162,16 @@ interface Messages {
       correctedBadge: string;
       errors: Record<string, string>;
     };
+    rules: {
+      button: string;
+      title: string;
+      timeTitle: string;
+      inLabel: string;
+      outLabel: string;
+      locationTitle: string;
+      locationDesc: string; // uses {distance}
+      close: string;
+    };
   };
   language: {
     label: string;
@@ -335,6 +345,16 @@ export const MESSAGES: Record<Lang, Messages> = {
           UNKNOWN: '操作失败：{code}',
         },
       },
+      rules: {
+        button: '打卡规则',
+        title: '打卡规则',
+        timeTitle: '打卡时间',
+        inLabel: '上班',
+        outLabel: '下班',
+        locationTitle: '打卡位置',
+        locationDesc: '需在距离办公点 {distance} 以内',
+        close: '关闭',
+      },
     },
     language: { label: '语言' },
   },
@@ -504,6 +524,16 @@ export const MESSAGES: Record<Lang, Messages> = {
           UNKNOWN: 'Action failed: {code}',
         },
       },
+      rules: {
+        button: 'Punch rules',
+        title: 'Punch rules',
+        timeTitle: 'Punch time',
+        inLabel: 'Clock in',
+        outLabel: 'Clock out',
+        locationTitle: 'Punch location',
+        locationDesc: 'Must be within {distance} of an office',
+        close: 'Close',
+      },
     },
     language: { label: 'Language' },
   },
@@ -672,6 +702,16 @@ export const MESSAGES: Record<Lang, Messages> = {
           NOT_ADMIN: 'Se requieren privilegios de administrador.',
           UNKNOWN: 'Acción fallida: {code}',
         },
+      },
+      rules: {
+        button: 'Reglas de fichaje',
+        title: 'Reglas de fichaje',
+        timeTitle: 'Hora de fichaje',
+        inLabel: 'Entrada',
+        outLabel: 'Salida',
+        locationTitle: 'Ubicación de fichaje',
+        locationDesc: 'Debe estar a menos de {distance} de una oficina',
+        close: 'Cerrar',
       },
     },
     language: { label: 'Idioma' },
