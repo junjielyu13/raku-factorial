@@ -145,6 +145,8 @@ function LocationPill({
   }
   const distM = distanceToNearestOffice(lat, lng, offices);
   const isFar = distM !== null && distM > FAR_THRESHOLD_M;
+  // Location within the office radius is normal — no pill needed.
+  if (distM !== null && !isFar) return null;
   return (
     <a
       href={`https://www.google.com/maps?q=${lat},${lng}`}
