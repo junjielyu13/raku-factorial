@@ -36,7 +36,11 @@ export function MyRequests() {
         *,
         target:effective_punches!punch_edit_requests_target_effective_id_fkey(effective_time, kind)
       `)
+      // Only self-submitted requests. Admin direct corrections also land in
+      // this table with created_by = admin_id; those are excluded here so the
+      // "Mis solicitudes" view reflects strictly what the employee submitted.
       .eq('employee_id', profile.id)
+      .eq('created_by', profile.id)
       .order('created_at', { ascending: false })
       .then(({ data }) => {
         setRows((data as unknown as Row[]) ?? []);
