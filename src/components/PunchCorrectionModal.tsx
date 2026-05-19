@@ -152,7 +152,7 @@ export function PunchCorrectionModal(props: Props) {
                 <div className="grid grid-cols-2 gap-2 rounded-lg bg-slate-100 p-1">
                   {(['in', 'out'] as const).map(k => (
                     <button type="button" key={k} onClick={() => setKind(k)}
-                      disabled={props.mode === 'add-missing'}
+                      disabled={props.mode === 'add-missing' || props.mode === 'modify'}
                       className={`py-2 rounded-md text-sm font-medium transition disabled:cursor-not-allowed ${kind === k ? 'bg-white shadow text-slate-900' : 'text-slate-600'}`}>
                       {t(`punch.${k}`)}
                     </button>
