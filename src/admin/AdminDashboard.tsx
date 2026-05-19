@@ -31,7 +31,8 @@ interface EmployeeOption { id: string; full_name: string }
 
 type ModalState =
   | { mode: 'add' }
-  | { mode: 'modify' | 'delete'; target: CorrectionTarget };
+  | { mode: 'modify'; target: CorrectionTarget }
+  | { mode: 'delete'; targets: CorrectionTarget[] };
 
 type Shift = ShiftPair<Row>;
 
@@ -477,54 +478,49 @@ export function AdminDashboard() {
           </>
         );
 
-        const renderShiftRow = (s: Shift, key: string) => (
-          <li key={key} className="px-4 py-3">
-            <div className="grid grid-cols-[auto_auto_auto] gap-x-2 gap-y-1.5 items-start w-fit max-w-full">
-              {s.in ? (
-                <div className="flex items-center gap-1">
+        const renderShiftRow = (s: Shift, key: string) => {
+          const rowTargets: CorrectionTarget[] = [
+            ...(s.in ? [targetOf(s.in)] : []),
+            ...(s.out ? [targetOf(s.out)] : []),
+          ];
+          return (
+            <li key={key} className="px-4 py-3 flex items-start justify-between gap-2">
+              <div className="grid grid-cols-[auto_auto_auto] gap-x-2 gap-y-1.5 items-start w-fit max-w-full">
+                {s.in ? (
                   <TimeBox p={s.in} onModify={() => setModal({ mode: 'modify', target: targetOf(s.in!) })} />
-                  <button
-                    type="button"
-                    onClick={() => setModal({ mode: 'delete', target: targetOf(s.in!) })}
-                    className="h-7 w-7 inline-flex items-center justify-center rounded-md text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition"
-                    title={`${t('admin.correct.delete')} · ${t('punch.in')}`}
-                    aria-label={`${t('admin.correct.delete')} ${t('punch.in')}`}
-                  >
-                    ✕
-                  </button>
-                </div>
-              ) : (
-                <span className="inline-flex items-center px-3 py-1.5 rounded-md bg-slate-50 ring-1 ring-slate-200 text-slate-400 text-sm">—</span>
-              )}
-              <span className="text-slate-400 self-center px-1">–</span>
-              {s.out ? (
-                <div className="flex items-center gap-1">
+                ) : (
+                  <span className="inline-flex items-center px-3 py-1.5 rounded-md bg-slate-50 ring-1 ring-slate-200 text-slate-400 text-sm">—</span>
+                )}
+                <span className="text-slate-400 self-center px-1">–</span>
+                {s.out ? (
                   <TimeBox p={s.out} onModify={() => setModal({ mode: 'modify', target: targetOf(s.out!) })} />
-                  <button
-                    type="button"
-                    onClick={() => setModal({ mode: 'delete', target: targetOf(s.out!) })}
-                    className="h-7 w-7 inline-flex items-center justify-center rounded-md text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition"
-                    title={`${t('admin.correct.delete')} · ${t('punch.out')}`}
-                    aria-label={`${t('admin.correct.delete')} ${t('punch.out')}`}
-                  >
-                    ✕
-                  </button>
+                ) : (
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-amber-100 text-amber-800 text-sm font-medium">
+                    ⚠️ {t('admin.shifts.openShift')}
+                  </span>
+                )}
+                <div className="justify-self-start">
+                  {s.in && <LocationPill p={s.in} offices={offices} t={t} />}
                 </div>
-              ) : (
-                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-amber-100 text-amber-800 text-sm font-medium">
-                  ⚠️ {t('admin.shifts.openShift')}
-                </span>
+                <span />
+                <div className="justify-self-start">
+                  {s.out && <LocationPill p={s.out} offices={offices} t={t} />}
+                </div>
+              </div>
+              {rowTargets.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setModal({ mode: 'delete', targets: rowTargets })}
+                  className="h-7 w-7 shrink-0 inline-flex items-center justify-center rounded-md text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition"
+                  title={t('admin.correct.delete')}
+                  aria-label={t('admin.correct.delete')}
+                >
+                  ✕
+                </button>
               )}
-              <div className="justify-self-start">
-                {s.in && <LocationPill p={s.in} offices={offices} t={t} />}
-              </div>
-              <span />
-              <div className="justify-self-start">
-                {s.out && <LocationPill p={s.out} offices={offices} t={t} />}
-              </div>
-            </div>
-          </li>
-        );
+            </li>
+          );
+        };
 
         return (
           <div className="space-y-3">
@@ -573,15 +569,28 @@ export function AdminDashboard() {
         );
       })()}
 
-      {modal && (
+      {modal && (modal.mode === 'add' ? (
         <PunchCorrectionModal
-          mode={modal.mode}
-          target={modal.mode === 'add' ? undefined : modal.target}
+          mode="add"
           employees={employees}
           onClose={() => setModal(null)}
           onDone={() => { setModal(null); fetchPunches(); }}
         />
-      )}
+      ) : modal.mode === 'modify' ? (
+        <PunchCorrectionModal
+          mode="modify"
+          target={modal.target}
+          onClose={() => setModal(null)}
+          onDone={() => { setModal(null); fetchPunches(); }}
+        />
+      ) : (
+        <PunchCorrectionModal
+          mode="delete"
+          targets={modal.targets}
+          onClose={() => setModal(null)}
+          onDone={() => { setModal(null); fetchPunches(); }}
+        />
+      ))}
     </div>
   );
 }
