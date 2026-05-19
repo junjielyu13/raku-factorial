@@ -25,7 +25,10 @@ export function EmployeeHistory() {
   const [selectedDate, setSelectedDate] = useState<string>(madridTodayKey());
   const [pageSize, setPageSize] = useState<PageSize>(10);
   const [page, setPage] = useState(0);
-  const [modal, setModal] = useState<{ mode: 'modify' | 'delete'; target: EditTarget } | null>(null);
+  type ModalState =
+    | { mode: 'modify'; target: EditTarget }
+    | { mode: 'delete'; targets: EditTarget[] };
+  const [modal, setModal] = useState<ModalState | null>(null);
 
   const load = useCallback(() => {
     if (!profile) return;
@@ -161,59 +164,52 @@ export function EmployeeHistory() {
                 <ul className="divide-y divide-slate-100">
                   {dayShifts.map((s, idx) => {
                     const anchor = s.in ?? s.out!;
+                    const rowTargets: EditTarget[] = [
+                      ...(s.in ? [{ effective_id: s.in.id, kind: s.in.kind, effective_time: s.in.effective_time }] : []),
+                      ...(s.out ? [{ effective_id: s.out.id, kind: s.out.kind, effective_time: s.out.effective_time }] : []),
+                    ];
                     return (
-                      <li key={`${anchor.id}-${idx}`} className="px-4 py-3">
+                      <li key={`${anchor.id}-${idx}`} className="px-4 py-3 flex items-center justify-between gap-2">
                         <div className="flex items-center gap-2 flex-wrap">
                           {s.in ? (
-                            <div className="flex items-center gap-1">
-                              <button
-                                type="button"
-                                onClick={() => setModal({ mode: 'modify', target: { effective_id: s.in!.id, kind: s.in!.kind, effective_time: s.in!.effective_time } })}
-                                className="inline-flex items-center px-3 py-1.5 rounded-md bg-white ring-1 ring-slate-200 font-mono tabular-nums text-slate-900 text-sm hover:bg-slate-50 hover:ring-emerald-400 transition"
-                                title={t('editRequest.requestModifyTitle')}
-                              >
-                                {formatTime(s.in.effective_time)}
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => setModal({ mode: 'delete', target: { effective_id: s.in!.id, kind: s.in!.kind, effective_time: s.in!.effective_time } })}
-                                className="h-7 w-7 inline-flex items-center justify-center rounded-md text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition"
-                                title={`${t('editRequest.requestDeleteTitle')} · ${t('punch.in')}`}
-                                aria-label={`${t('editRequest.requestDeleteTitle')} ${t('punch.in')}`}
-                              >
-                                ✕
-                              </button>
-                            </div>
+                            <button
+                              type="button"
+                              onClick={() => setModal({ mode: 'modify', target: { effective_id: s.in!.id, kind: s.in!.kind, effective_time: s.in!.effective_time } })}
+                              className="inline-flex items-center px-3 py-1.5 rounded-md bg-white ring-1 ring-slate-200 font-mono tabular-nums text-slate-900 text-sm hover:bg-slate-50 hover:ring-emerald-400 transition"
+                              title={t('editRequest.requestModifyTitle')}
+                            >
+                              {formatTime(s.in.effective_time)}
+                            </button>
                           ) : (
                             <span className="inline-flex items-center px-3 py-1.5 rounded-md bg-slate-50 ring-1 ring-slate-200 text-slate-400 text-sm">—</span>
                           )}
                           <span className="text-slate-400 px-1">–</span>
                           {s.out ? (
-                            <div className="flex items-center gap-1">
-                              <button
-                                type="button"
-                                onClick={() => setModal({ mode: 'modify', target: { effective_id: s.out!.id, kind: s.out!.kind, effective_time: s.out!.effective_time } })}
-                                className="inline-flex items-center px-3 py-1.5 rounded-md bg-white ring-1 ring-slate-200 font-mono tabular-nums text-slate-900 text-sm hover:bg-slate-50 hover:ring-emerald-400 transition"
-                                title={t('editRequest.requestModifyTitle')}
-                              >
-                                {formatTime(s.out.effective_time)}
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => setModal({ mode: 'delete', target: { effective_id: s.out!.id, kind: s.out!.kind, effective_time: s.out!.effective_time } })}
-                                className="h-7 w-7 inline-flex items-center justify-center rounded-md text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition"
-                                title={`${t('editRequest.requestDeleteTitle')} · ${t('punch.out')}`}
-                                aria-label={`${t('editRequest.requestDeleteTitle')} ${t('punch.out')}`}
-                              >
-                                ✕
-                              </button>
-                            </div>
+                            <button
+                              type="button"
+                              onClick={() => setModal({ mode: 'modify', target: { effective_id: s.out!.id, kind: s.out!.kind, effective_time: s.out!.effective_time } })}
+                              className="inline-flex items-center px-3 py-1.5 rounded-md bg-white ring-1 ring-slate-200 font-mono tabular-nums text-slate-900 text-sm hover:bg-slate-50 hover:ring-emerald-400 transition"
+                              title={t('editRequest.requestModifyTitle')}
+                            >
+                              {formatTime(s.out.effective_time)}
+                            </button>
                           ) : (
                             <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-amber-100 text-amber-800 text-sm font-medium">
                               ⚠️ {t('admin.shifts.openShift')}
                             </span>
                           )}
                         </div>
+                        {rowTargets.length > 0 && (
+                          <button
+                            type="button"
+                            onClick={() => setModal({ mode: 'delete', targets: rowTargets })}
+                            className="h-7 w-7 shrink-0 inline-flex items-center justify-center rounded-md text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition"
+                            title={t('editRequest.requestDeleteTitle')}
+                            aria-label={t('editRequest.requestDeleteTitle')}
+                          >
+                            ✕
+                          </button>
+                        )}
                       </li>
                     );
                   })}
@@ -260,14 +256,21 @@ export function EmployeeHistory() {
         </div>
       )}
 
-      {modal && (
+      {modal && (modal.mode === 'modify' ? (
         <EditRequestModal
-          mode={modal.mode}
+          mode="modify"
           target={modal.target}
           onClose={() => setModal(null)}
           onDone={() => { setModal(null); load(); }}
         />
-      )}
+      ) : (
+        <EditRequestModal
+          mode="delete"
+          targets={modal.targets}
+          onClose={() => setModal(null)}
+          onDone={() => { setModal(null); load(); }}
+        />
+      ))}
     </div>
   );
 }
