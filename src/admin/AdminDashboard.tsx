@@ -32,7 +32,8 @@ interface EmployeeOption { id: string; full_name: string }
 type ModalState =
   | { mode: 'add' }
   | { mode: 'modify'; target: CorrectionTarget }
-  | { mode: 'delete'; targets: CorrectionTarget[] };
+  | { mode: 'delete'; targets: CorrectionTarget[] }
+  | { mode: 'add-missing'; employeeId: string; employeeName: string; kind: 'in' | 'out' };
 
 type Shift = ShiftPair<Row>;
 
@@ -489,17 +490,25 @@ export function AdminDashboard() {
                 {s.in ? (
                   <TimeBox p={s.in} onModify={() => setModal({ mode: 'modify', target: targetOf(s.in!) })} />
                 ) : (
-                  <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-amber-100 text-amber-800 text-sm font-medium">
+                  <button
+                    type="button"
+                    onClick={() => setModal({ mode: 'add-missing', kind: 'in', employeeId: s.out!.employee_id, employeeName: s.out!.employee.full_name })}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-amber-100 text-amber-800 text-sm font-medium hover:bg-amber-200 transition"
+                  >
                     ⚠️ {t('admin.shifts.strayOut')}
-                  </span>
+                  </button>
                 )}
                 <span className="text-slate-400 self-center px-1">–</span>
                 {s.out ? (
                   <TimeBox p={s.out} onModify={() => setModal({ mode: 'modify', target: targetOf(s.out!) })} />
                 ) : (
-                  <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-amber-100 text-amber-800 text-sm font-medium">
+                  <button
+                    type="button"
+                    onClick={() => setModal({ mode: 'add-missing', kind: 'out', employeeId: s.in!.employee_id, employeeName: s.in!.employee.full_name })}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-amber-100 text-amber-800 text-sm font-medium hover:bg-amber-200 transition"
+                  >
                     ⚠️ {t('admin.shifts.openShift')}
-                  </span>
+                  </button>
                 )}
                 <div className="justify-self-start">
                   {s.in && <LocationPill p={s.in} offices={offices} t={t} />}
@@ -582,6 +591,15 @@ export function AdminDashboard() {
         <PunchCorrectionModal
           mode="modify"
           target={modal.target}
+          onClose={() => setModal(null)}
+          onDone={() => { setModal(null); fetchPunches(); }}
+        />
+      ) : modal.mode === 'add-missing' ? (
+        <PunchCorrectionModal
+          mode="add-missing"
+          employeeId={modal.employeeId}
+          employeeName={modal.employeeName}
+          kind={modal.kind}
           onClose={() => setModal(null)}
           onDone={() => { setModal(null); fetchPunches(); }}
         />

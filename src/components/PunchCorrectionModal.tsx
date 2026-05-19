@@ -32,6 +32,16 @@ type Props =
       targets: CorrectionTarget[];
       onClose: () => void;
       onDone: () => void;
+    }
+  | {
+      // Add the missing punch of an incomplete shift. Employee and kind are
+      // fixed by the row that was clicked; the admin only enters time + reason.
+      mode: 'add-missing';
+      employeeId: string;
+      employeeName: string;
+      kind: 'in' | 'out';
+      onClose: () => void;
+      onDone: () => void;
     };
 
 // ISO → datetime-local input value (browser local TZ; new Date(value) reads it back consistently)
@@ -44,7 +54,10 @@ function toLocalInput(iso: string): string {
 export function PunchCorrectionModal(props: Props) {
   const { t } = useTranslation();
   const [employeeId, setEmployeeId] = useState('');
-  const initialKind = props.mode === 'modify' ? props.target.kind : 'in';
+  const initialKind =
+    props.mode === 'modify' ? props.target.kind
+    : props.mode === 'add-missing' ? props.kind
+    : 'in';
   const initialIso = props.mode === 'modify' ? props.target.effective_time : '';
   const [kind, setKind] = useState<'in' | 'out'>(initialKind);
   const [datetime, setDatetime] = useState(initialIso ? toLocalInput(initialIso) : '');
@@ -53,7 +66,7 @@ export function PunchCorrectionModal(props: Props) {
   const [err, setErr] = useState<string | null>(null);
 
   const titleKey =
-    props.mode === 'add' ? 'admin.correct.modalAddTitle'
+    props.mode === 'add' || props.mode === 'add-missing' ? 'admin.correct.modalAddTitle'
     : props.mode === 'modify' ? 'admin.correct.modalModifyTitle'
     : 'admin.correct.modalDeleteTitle';
 
@@ -61,9 +74,11 @@ export function PunchCorrectionModal(props: Props) {
     e.preventDefault();
     setBusy(true); setErr(null);
     try {
-      if (props.mode === 'add') {
+      if (props.mode === 'add' || props.mode === 'add-missing') {
         await adminCorrectPunch({
-          action: 'add', employee_id: employeeId, kind,
+          action: 'add',
+          employee_id: props.mode === 'add' ? employeeId : props.employeeId,
+          kind,
           time: new Date(datetime).toISOString(), reason,
         });
       } else if (props.mode === 'modify') {
@@ -93,7 +108,9 @@ export function PunchCorrectionModal(props: Props) {
 
   const deleteTargets = props.mode === 'delete' ? props.targets : [];
   const modifyTarget = props.mode === 'modify' ? props.target : null;
-  const summaryEmployeeName = modifyTarget?.employee_name ?? deleteTargets[0]?.employee_name ?? '';
+  const summaryEmployeeName =
+    props.mode === 'add-missing' ? props.employeeName
+    : modifyTarget?.employee_name ?? deleteTargets[0]?.employee_name ?? '';
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 px-4" onClick={props.onClose}>
@@ -111,7 +128,7 @@ export function PunchCorrectionModal(props: Props) {
             </label>
           )}
 
-          {(props.mode === 'modify' || props.mode === 'delete') && summaryEmployeeName && (
+          {(props.mode === 'modify' || props.mode === 'delete' || props.mode === 'add-missing') && summaryEmployeeName && (
             <div className="text-sm text-slate-600">
               <span className="text-slate-500">{t('admin.correct.employeeLabel')}: </span>
               {summaryEmployeeName}
@@ -128,14 +145,15 @@ export function PunchCorrectionModal(props: Props) {
             </div>
           )}
 
-          {(props.mode === 'add' || props.mode === 'modify') && (
+          {(props.mode === 'add' || props.mode === 'modify' || props.mode === 'add-missing') && (
             <>
               <div className="space-y-1.5">
                 <span className="text-sm font-medium text-slate-700">{t('admin.correct.typeLabel')}</span>
                 <div className="grid grid-cols-2 gap-2 rounded-lg bg-slate-100 p-1">
                   {(['in', 'out'] as const).map(k => (
                     <button type="button" key={k} onClick={() => setKind(k)}
-                      className={`py-2 rounded-md text-sm font-medium transition ${kind === k ? 'bg-white shadow text-slate-900' : 'text-slate-600'}`}>
+                      disabled={props.mode === 'add-missing'}
+                      className={`py-2 rounded-md text-sm font-medium transition disabled:cursor-not-allowed ${kind === k ? 'bg-white shadow text-slate-900' : 'text-slate-600'}`}>
                       {t(`punch.${k}`)}
                     </button>
                   ))}
