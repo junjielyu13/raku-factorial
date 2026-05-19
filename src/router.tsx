@@ -8,6 +8,7 @@ import { SubmitEditRequest } from './employee/SubmitEditRequest';
 import { MyRequests } from './employee/MyRequests';
 import { AdminDashboard } from './admin/AdminDashboard';
 import { AdminApprovals } from './admin/AdminApprovals';
+import { AdminCorrectionsLog } from './admin/AdminCorrectionsLog';
 import { AdminExport } from './admin/AdminExport';
 
 export const router = createBrowserRouter([
@@ -18,6 +19,7 @@ export const router = createBrowserRouter([
   { path: '/my-requests',    element: <RequireAuth><MyRequests /></RequireAuth> },
   { path: '/admin',          element: <RequireAuth adminOnly><AdminDashboard /></RequireAuth> },
   { path: '/admin/approvals', element: <RequireAuth adminOnly><AdminApprovals /></RequireAuth> },
+  { path: '/admin/corrections', element: <RequireAuth adminOnly><AdminCorrectionsLog /></RequireAuth> },
   { path: '/admin/export',   element: <RequireAuth adminOnly><AdminExport /></RequireAuth> },
   { path: '*',               element: <Navigate to="/" replace /> },
 ]);

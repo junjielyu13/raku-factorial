@@ -197,6 +197,15 @@ interface Messages {
       locationDesc: string; // uses {distance}
       close: string;
     };
+    corrections: {
+      button: string;
+      title: string;
+      none: string;
+      byAdmin: string;       // uses {admin}, {time}
+      submittedBy: string;   // uses {name}, {time}
+      reviewedBy: string;    // uses {name}, {time}
+      truncated: string;     // uses {count}
+    };
   };
   language: {
     label: string;
@@ -404,6 +413,15 @@ export const MESSAGES: Record<Lang, Messages> = {
         locationDesc: '需在距离办公点 {distance} 以内',
         close: '关闭',
       },
+      corrections: {
+        button: '修改记录',
+        title: '打卡修改记录',
+        none: '没有修改记录',
+        byAdmin: '管理员 {admin} 直接修改 · {time}',
+        submittedBy: '由 {name} 提交 · {time}',
+        reviewedBy: '由 {name} 审批 · {time}',
+        truncated: '仅显示最近 {count} 条',
+      },
     },
     language: { label: '语言' },
   },
@@ -607,6 +625,15 @@ export const MESSAGES: Record<Lang, Messages> = {
         locationDesc: 'Must be within {distance} of an office',
         close: 'Close',
       },
+      corrections: {
+        button: 'Corrections log',
+        title: 'Punch corrections log',
+        none: 'No corrections yet',
+        byAdmin: 'Direct admin change by {admin} · {time}',
+        submittedBy: 'Submitted by {name} · {time}',
+        reviewedBy: 'Reviewed by {name} · {time}',
+        truncated: 'Showing the most recent {count}',
+      },
     },
     language: { label: 'Language' },
   },
@@ -809,6 +836,15 @@ export const MESSAGES: Record<Lang, Messages> = {
         locationTitle: 'Ubicación de fichaje',
         locationDesc: 'Debe estar a menos de {distance} de una oficina',
         close: 'Cerrar',
+      },
+      corrections: {
+        button: 'Historial de correcciones',
+        title: 'Historial de correcciones',
+        none: 'Sin correcciones todavía',
+        byAdmin: 'Cambio directo por {admin} · {time}',
+        submittedBy: 'Enviada por {name} · {time}',
+        reviewedBy: 'Revisada por {name} · {time}',
+        truncated: 'Mostrando las {count} más recientes',
       },
     },
     language: { label: 'Idioma' },

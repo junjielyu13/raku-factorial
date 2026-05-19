@@ -495,6 +495,7 @@ export function AdminDashboard() {
               )}
             </Link>
             <Link to="/admin/export" className="app-btn-ghost">{t('admin.exportLink')}</Link>
+            <Link to="/admin/corrections" className="app-btn-ghost">{t('admin.corrections.button')}</Link>
             <button type="button" onClick={() => setShowRules(true)} className="app-btn-ghost">
               {t('admin.rules.button')}
             </button>
