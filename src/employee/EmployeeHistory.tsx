@@ -85,7 +85,12 @@ export function EmployeeHistory() {
   return (
     <div className="min-h-full max-w-md mx-auto px-4 py-6 space-y-4">
       <Link to="/" className="inline-block text-sm text-emerald-700 hover:underline">{t('common.back')}</Link>
-      <h1 className="text-2xl font-bold text-slate-900">{t('history.title')}</h1>
+      <div className="flex items-baseline justify-between gap-3">
+        <h1 className="text-2xl font-bold text-slate-900">{t('history.title')}</h1>
+        <Link to="/submit-edit" className="text-sm text-emerald-700 hover:underline shrink-0">
+          {t('home.submitEdit')} →
+        </Link>
+      </div>
 
       <div className="space-y-3">
         <div className="grid grid-cols-3 gap-2 rounded-lg bg-slate-100 p-1">

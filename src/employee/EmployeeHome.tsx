@@ -172,15 +172,12 @@ export function EmployeeHome() {
         )}
       </section>
 
-      <nav className="grid grid-cols-2 gap-2">
+      <nav className="grid grid-cols-1 gap-2">
         <Link to="/history" className="app-card px-4 py-3 text-sm text-slate-700 text-center hover:bg-slate-50">
           {t('home.myHistory')}
         </Link>
-        <Link to="/submit-edit" className="app-card px-4 py-3 text-sm text-slate-700 text-center hover:bg-slate-50">
-          {t('home.submitEdit')}
-        </Link>
         {profile?.role === 'admin' && (
-          <Link to="/admin" className="col-span-2 app-card px-4 py-3 text-sm font-medium text-emerald-700 text-center hover:bg-emerald-50">
+          <Link to="/admin" className="app-card px-4 py-3 text-sm font-medium text-emerald-700 text-center hover:bg-emerald-50">
             {t('home.adminLink')} →
           </Link>
         )}
