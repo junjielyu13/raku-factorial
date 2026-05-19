@@ -27,7 +27,8 @@ export function EmployeeHistory() {
   const [page, setPage] = useState(0);
   type ModalState =
     | { mode: 'modify'; target: EditTarget }
-    | { mode: 'delete'; targets: EditTarget[] };
+    | { mode: 'delete'; targets: EditTarget[] }
+    | { mode: 'add'; kind: 'in' | 'out' };
   const [modal, setModal] = useState<ModalState | null>(null);
 
   const load = useCallback(() => {
@@ -181,9 +182,14 @@ export function EmployeeHistory() {
                               {formatTime(s.in.effective_time)}
                             </button>
                           ) : (
-                            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-amber-100 text-amber-800 text-sm font-medium">
+                            <button
+                              type="button"
+                              onClick={() => setModal({ mode: 'add', kind: 'in' })}
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-amber-100 text-amber-800 text-sm font-medium hover:bg-amber-200 transition"
+                              title={t('editRequest.requestAddTitle')}
+                            >
                               ⚠️ {t('admin.shifts.strayOut')}
-                            </span>
+                            </button>
                           )}
                           <span className="text-slate-400 px-1">–</span>
                           {s.out ? (
@@ -196,9 +202,14 @@ export function EmployeeHistory() {
                               {formatTime(s.out.effective_time)}
                             </button>
                           ) : (
-                            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-amber-100 text-amber-800 text-sm font-medium">
+                            <button
+                              type="button"
+                              onClick={() => setModal({ mode: 'add', kind: 'out' })}
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-amber-100 text-amber-800 text-sm font-medium hover:bg-amber-200 transition"
+                              title={t('editRequest.requestAddTitle')}
+                            >
                               ⚠️ {t('admin.shifts.openShift')}
-                            </span>
+                            </button>
                           )}
                         </div>
                         {rowTargets.length > 0 && (
@@ -262,6 +273,13 @@ export function EmployeeHistory() {
         <EditRequestModal
           mode="modify"
           target={modal.target}
+          onClose={() => setModal(null)}
+          onDone={() => { setModal(null); load(); }}
+        />
+      ) : modal.mode === 'add' ? (
+        <EditRequestModal
+          mode="add"
+          kind={modal.kind}
           onClose={() => setModal(null)}
           onDone={() => { setModal(null); load(); }}
         />

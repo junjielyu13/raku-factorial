@@ -77,8 +77,10 @@ interface Messages {
     submitting: string;
     requestModifyTitle: string;
     requestDeleteTitle: string;
+    requestAddTitle: string;
     requestModifyAction: string;
     requestDeleteAction: string;
+    requestAddAction: string;
     cancel: string;
     pendingHint: string;
     errors: Record<string, string>;
@@ -246,8 +248,10 @@ export const MESSAGES: Record<Lang, Messages> = {
       submitting: '提交中…',
       requestModifyTitle: '申请修改打卡时间',
       requestDeleteTitle: '申请删除打卡',
+      requestAddTitle: '申请补打卡',
       requestModifyAction: '提交修改申请',
       requestDeleteAction: '提交删除申请',
+      requestAddAction: '提交补卡申请',
       cancel: '取消',
       pendingHint: '提交后需等待管理员审批。',
       errors: {
@@ -429,8 +433,10 @@ export const MESSAGES: Record<Lang, Messages> = {
       submitting: 'Submitting…',
       requestModifyTitle: 'Request time change',
       requestDeleteTitle: 'Request punch deletion',
+      requestAddTitle: 'Request missing punch',
       requestModifyAction: 'Submit change request',
       requestDeleteAction: 'Submit deletion request',
+      requestAddAction: 'Submit add request',
       cancel: 'Cancel',
       pendingHint: 'Your request will await admin approval.',
       errors: {
@@ -612,8 +618,10 @@ export const MESSAGES: Record<Lang, Messages> = {
       submitting: 'Enviando…',
       requestModifyTitle: 'Solicitar cambio de hora',
       requestDeleteTitle: 'Solicitar borrado del fichaje',
+      requestAddTitle: 'Solicitar fichaje faltante',
       requestModifyAction: 'Enviar solicitud de cambio',
       requestDeleteAction: 'Enviar solicitud de borrado',
+      requestAddAction: 'Enviar solicitud de fichaje',
       cancel: 'Cancelar',
       pendingHint: 'La solicitud quedará pendiente de aprobación.',
       errors: {

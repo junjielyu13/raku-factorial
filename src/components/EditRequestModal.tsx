@@ -25,6 +25,15 @@ type Props =
       targets: EditTarget[];
       onClose: () => void;
       onDone: () => void;
+    }
+  | {
+      // Add the missing punch of an incomplete shift. The kind is fixed
+      // (the user clicked the strayOut or openShift chip); they enter
+      // when the punch should have been + a reason.
+      mode: 'add';
+      kind: 'in' | 'out';
+      onClose: () => void;
+      onDone: () => void;
     };
 
 function toLocalInput(iso: string): string {
@@ -52,6 +61,13 @@ export function EditRequestModal(props: Props) {
           requested_time: new Date(datetime).toISOString(),
           reason,
         });
+      } else if (props.mode === 'add') {
+        await submitEditRequest({
+          action: 'add',
+          requested_kind: props.kind,
+          requested_time: new Date(datetime).toISOString(),
+          reason,
+        });
       } else {
         // Fire a delete request per punch in the shift, sequentially so the
         // server's per-target validation runs cleanly for each.
@@ -75,9 +91,15 @@ export function EditRequestModal(props: Props) {
     }
   }
 
-  const title = props.mode === 'modify' ? t('editRequest.requestModifyTitle') : t('editRequest.requestDeleteTitle');
-  const action = props.mode === 'modify' ? t('editRequest.requestModifyAction') : t('editRequest.requestDeleteAction');
-  const summaryTargets = props.mode === 'modify' ? [props.target] : props.targets;
+  const title =
+    props.mode === 'modify' ? t('editRequest.requestModifyTitle')
+    : props.mode === 'add' ? t('editRequest.requestAddTitle')
+    : t('editRequest.requestDeleteTitle');
+  const action =
+    props.mode === 'modify' ? t('editRequest.requestModifyAction')
+    : props.mode === 'add' ? t('editRequest.requestAddAction')
+    : t('editRequest.requestDeleteAction');
+  const summaryTargets = props.mode === 'modify' ? [props.target] : props.mode === 'delete' ? props.targets : [];
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 px-4" onClick={props.onClose}>
@@ -85,15 +107,23 @@ export function EditRequestModal(props: Props) {
         <h2 className="text-lg font-bold text-slate-900">{title}</h2>
 
         <form onSubmit={submit} className="space-y-4">
-          <div className="rounded-lg bg-slate-50 px-3 py-2 text-sm text-slate-700 space-y-1">
-            {summaryTargets.map(tgt => (
-              <div key={tgt.effective_id}>
-                {tgt.kind === 'in' ? t('punch.in') : t('punch.out')} · {formatDateTime(tgt.effective_time)}
-              </div>
-            ))}
-          </div>
+          {summaryTargets.length > 0 && (
+            <div className="rounded-lg bg-slate-50 px-3 py-2 text-sm text-slate-700 space-y-1">
+              {summaryTargets.map(tgt => (
+                <div key={tgt.effective_id}>
+                  {tgt.kind === 'in' ? t('punch.in') : t('punch.out')} · {formatDateTime(tgt.effective_time)}
+                </div>
+              ))}
+            </div>
+          )}
 
-          {props.mode === 'modify' && (
+          {props.mode === 'add' && (
+            <div className="rounded-lg bg-slate-50 px-3 py-2 text-sm text-slate-700">
+              {props.kind === 'in' ? t('punch.in') : t('punch.out')}
+            </div>
+          )}
+
+          {(props.mode === 'modify' || props.mode === 'add') && (
             <label className="block space-y-1.5">
               <span className="text-sm font-medium text-slate-700">{t('editRequest.actualTime')}</span>
               <input
