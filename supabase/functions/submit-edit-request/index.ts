@@ -13,6 +13,24 @@ interface Body {
   target_effective_id?: string;
 }
 
+// [start, end) ISO instants for the Europe/Madrid civil day containing `d`.
+// Used to scope add-request supersession to the requested day.
+function madridDayBounds(d: Date): { start: string; end: string } {
+  const fmt = new Intl.DateTimeFormat('sv-SE', {
+    timeZone: 'Europe/Madrid',
+    year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false,
+  });
+  const parts = fmt.formatToParts(d);
+  const get = (t: string) => Number(parts.find(p => p.type === t)!.value);
+  const y = get('year'), m = get('month'), day = get('day');
+  const asUtc = Date.UTC(y, m - 1, day, get('hour'), get('minute'), get('second'));
+  const offsetMs = asUtc - d.getTime();
+  const start = new Date(Date.UTC(y, m - 1, day, 0, 0, 0) - offsetMs);
+  const end   = new Date(start.getTime() + 24 * 60 * 60 * 1000);
+  return { start: start.toISOString(), end: end.toISOString() };
+}
+
 Deno.serve(async (req) => {
   try {
     const cors = handleCors(req);
@@ -69,6 +87,29 @@ Deno.serve(async (req) => {
 
     if (isNaN(when.getTime())) throw new HttpError(400, 'BAD_TIME');
     if (when.getTime() > Date.now()) throw new HttpError(400, 'FUTURE_TIME');
+
+    // Re-submissions replace the prior pending request:
+    //   modify / delete – any pending row on the same target_effective_id
+    //   add             – any pending add by this user, same kind, same Madrid day
+    // The old row is moved to status='superseded' (audit-preserving) rather than
+    // deleted, and won't appear in the admin pending queue.
+    if (action === 'add') {
+      const { start, end } = madridDayBounds(when);
+      await admin.from('punch_edit_requests')
+        .update({ status: 'superseded' })
+        .eq('employee_id', user.id)
+        .eq('status', 'pending')
+        .eq('action', 'add')
+        .eq('requested_kind', kind)
+        .gte('requested_time', start)
+        .lt('requested_time', end);
+    } else {
+      await admin.from('punch_edit_requests')
+        .update({ status: 'superseded' })
+        .eq('employee_id', user.id)
+        .eq('status', 'pending')
+        .eq('target_effective_id', body.target_effective_id!);
+    }
 
     const { error } = await admin.from('punch_edit_requests').insert({
       employee_id:         user.id,

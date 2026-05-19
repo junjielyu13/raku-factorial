@@ -67,6 +67,8 @@ interface Messages {
     pickDate: string;
     total: string;       // uses {h}, {m}
     rangeTotal: string;  // uses {h}, {m}
+    pendingAdd: string;     // uses {time}
+    pendingDelete: string;
   };
   editRequest: {
     title: string;
@@ -242,6 +244,8 @@ export const MESSAGES: Record<Lang, Messages> = {
       pickDate: '选择日期',
       total: '共 {h} 小时 {m} 分',
       rangeTotal: '合计 {h} 小时 {m} 分',
+      pendingAdd: '申请新增 {time}',
+      pendingDelete: '申请删除',
     },
     editRequest: {
       title: '补卡申请',
@@ -431,6 +435,8 @@ export const MESSAGES: Record<Lang, Messages> = {
       pickDate: 'Pick date',
       total: 'Total {h}h {m}m',
       rangeTotal: 'Total {h}h {m}m',
+      pendingAdd: 'Add pending {time}',
+      pendingDelete: 'Delete pending',
     },
     editRequest: {
       title: 'Punch correction request',
@@ -620,6 +626,8 @@ export const MESSAGES: Record<Lang, Messages> = {
       pickDate: 'Elegir fecha',
       total: 'Total {h} h {m} min',
       rangeTotal: 'Total {h} h {m} min',
+      pendingAdd: 'Solicitud nueva {time}',
+      pendingDelete: 'Solicitud de borrado',
     },
     editRequest: {
       title: 'Solicitud de corrección',

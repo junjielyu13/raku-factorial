@@ -36,7 +36,7 @@ export interface PunchEditRequest {
   requested_kind: 'in' | 'out';
   requested_time: string;
   reason: string;
-  status: 'pending' | 'approved' | 'rejected';
+  status: 'pending' | 'approved' | 'rejected' | 'superseded';
   reviewed_by: string | null;
   reviewed_at: string | null;
   review_note: string | null;
