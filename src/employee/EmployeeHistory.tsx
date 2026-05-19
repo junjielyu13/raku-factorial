@@ -25,6 +25,115 @@ interface PendingReq {
   target_effective_id: string | null;
 }
 
+type Tfn = (key: string, vars?: Record<string, string | number>) => string;
+
+// One shift row: time pair on top, optional collapsed ⏳ icon below that
+// expands to show the pending-request summary on click.
+function ShiftRow({
+  s,
+  t,
+  pendingByTarget,
+  pendingAddByDayKind,
+  onModify,
+  onAdd,
+  onDelete,
+}: {
+  s: ShiftPair<EffectivePunch>;
+  t: Tfn;
+  pendingByTarget: Map<string, PendingReq>;
+  pendingAddByDayKind: Map<string, PendingReq>;
+  onModify: (p: EffectivePunch) => void;
+  onAdd: (kind: 'in' | 'out') => void;
+  onDelete: (targets: EditTarget[]) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const inPending  = s.in  ? pendingByTarget.get(s.in.id)  : null;
+  const outPending = s.out ? pendingByTarget.get(s.out.id) : null;
+  const addInPending  = !s.in  ? pendingAddByDayKind.get(`${s.date}|in`)  : null;
+  const addOutPending = !s.out ? pendingAddByDayKind.get(`${s.date}|out`) : null;
+  const rowTargets: EditTarget[] = [
+    ...(s.in ? [{ effective_id: s.in.id, kind: s.in.kind, effective_time: s.in.effective_time }] : []),
+    ...(s.out ? [{ effective_id: s.out.id, kind: s.out.kind, effective_time: s.out.effective_time }] : []),
+  ];
+
+  const kindLabel = (k: 'in' | 'out') => t(`punch.${k}`);
+  const fragments: string[] = [];
+  if (addInPending)  fragments.push(`+ ${kindLabel('in')}  ${formatTime(addInPending.requested_time)}`);
+  if (addOutPending) fragments.push(`+ ${kindLabel('out')} ${formatTime(addOutPending.requested_time)}`);
+  if (inPending?.action === 'modify')  fragments.push(`${kindLabel('in')}  → ${formatTime(inPending.requested_time)}`);
+  if (outPending?.action === 'modify') fragments.push(`${kindLabel('out')} → ${formatTime(outPending.requested_time)}`);
+  if (inPending?.action === 'delete' && outPending?.action === 'delete') {
+    fragments.push(`− ${kindLabel('in')} · − ${kindLabel('out')}`);
+  } else {
+    if (inPending?.action === 'delete')  fragments.push(`− ${kindLabel('in')}`);
+    if (outPending?.action === 'delete') fragments.push(`− ${kindLabel('out')}`);
+  }
+
+  const timeBoxBase = 'inline-flex items-center px-3 py-1.5 rounded-md bg-white ring-1 ring-slate-200 font-mono tabular-nums text-slate-900 text-sm hover:bg-slate-50 hover:ring-emerald-400 transition';
+  const addChipBase = 'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-amber-100 text-amber-800 text-sm font-medium hover:bg-amber-200 transition';
+
+  return (
+    <li className="px-4 py-3 space-y-1.5">
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          {s.in ? (
+            <button type="button" onClick={() => onModify(s.in!)} className={timeBoxBase} title={t('editRequest.requestModifyTitle')}>
+              {formatTime(s.in.effective_time)}
+            </button>
+          ) : (
+            <button type="button" onClick={() => onAdd('in')} className={addChipBase} title={t('editRequest.requestAddTitle')}>
+              ⚠️ {t('admin.shifts.strayOut')}
+            </button>
+          )}
+          <span className="text-slate-400 px-1">–</span>
+          {s.out ? (
+            <button type="button" onClick={() => onModify(s.out!)} className={timeBoxBase} title={t('editRequest.requestModifyTitle')}>
+              {formatTime(s.out.effective_time)}
+            </button>
+          ) : (
+            <button type="button" onClick={() => onAdd('out')} className={addChipBase} title={t('editRequest.requestAddTitle')}>
+              ⚠️ {t('admin.shifts.openShift')}
+            </button>
+          )}
+        </div>
+        {rowTargets.length > 0 && (
+          <button
+            type="button"
+            onClick={() => onDelete(rowTargets)}
+            className="h-7 w-7 shrink-0 inline-flex items-center justify-center rounded-md text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition"
+            title={t('editRequest.requestDeleteTitle')}
+            aria-label={t('editRequest.requestDeleteTitle')}
+          >
+            ✕
+          </button>
+        )}
+      </div>
+
+      {fragments.length > 0 && (
+        <div className="flex items-center gap-2 pl-1">
+          <button
+            type="button"
+            onClick={() => setOpen(o => !o)}
+            aria-expanded={open}
+            title={t('history.pendingToggle')}
+            aria-label={t('history.pendingToggle')}
+            className={`inline-flex h-5 w-5 items-center justify-center rounded-md text-xs transition ${
+              open ? 'bg-amber-200 text-amber-900' : 'bg-amber-100 text-amber-800 hover:bg-amber-200'
+            }`}
+          >
+            ⏳
+          </button>
+          {open && (
+            <span className="text-xs text-amber-700 leading-snug font-mono tabular-nums">
+              {fragments.join('  ·  ')}
+            </span>
+          )}
+        </div>
+      )}
+    </li>
+  );
+}
+
 export function EmployeeHistory() {
   const { profile } = useAuth();
   const { t } = useTranslation();
@@ -197,99 +306,18 @@ export function EmployeeHistory() {
                   </div>
                 </header>
                 <ul className="divide-y divide-slate-100">
-                  {dayShifts.map((s, idx) => {
-                    const anchor = s.in ?? s.out!;
-                    const inPending  = s.in  ? pendingByTarget.get(s.in.id)  : null;
-                    const outPending = s.out ? pendingByTarget.get(s.out.id) : null;
-                    const addInPending  = !s.in  ? pendingAddByDayKind.get(`${s.date}|in`)  : null;
-                    const addOutPending = !s.out ? pendingAddByDayKind.get(`${s.date}|out`) : null;
-                    const rowTargets: EditTarget[] = [
-                      ...(s.in ? [{ effective_id: s.in.id, kind: s.in.kind, effective_time: s.in.effective_time }] : []),
-                      ...(s.out ? [{ effective_id: s.out.id, kind: s.out.kind, effective_time: s.out.effective_time }] : []),
-                    ];
-
-                    // Pending overlay lives in a thin footer line below the time row.
-                    // Time boxes stay clean so they never wrap.
-                    const fragments: string[] = [];
-                    const kindLabel = (k: 'in' | 'out') => t(`punch.${k}`);
-                    if (addInPending)  fragments.push(`+ ${kindLabel('in')}  ${formatTime(addInPending.requested_time)}`);
-                    if (addOutPending) fragments.push(`+ ${kindLabel('out')} ${formatTime(addOutPending.requested_time)}`);
-                    if (inPending?.action === 'modify')  fragments.push(`${kindLabel('in')}  → ${formatTime(inPending.requested_time)}`);
-                    if (outPending?.action === 'modify') fragments.push(`${kindLabel('out')} → ${formatTime(outPending.requested_time)}`);
-                    if (inPending?.action === 'delete' && outPending?.action === 'delete') {
-                      fragments.push(`− ${kindLabel('in')} · − ${kindLabel('out')}`);
-                    } else {
-                      if (inPending?.action === 'delete')  fragments.push(`− ${kindLabel('in')}`);
-                      if (outPending?.action === 'delete') fragments.push(`− ${kindLabel('out')}`);
-                    }
-
-                    const timeBoxBase = 'inline-flex items-center px-3 py-1.5 rounded-md bg-white ring-1 ring-slate-200 font-mono tabular-nums text-slate-900 text-sm hover:bg-slate-50 hover:ring-emerald-400 transition';
-                    const addChipBase = 'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-amber-100 text-amber-800 text-sm font-medium hover:bg-amber-200 transition';
-
-                    return (
-                      <li key={`${anchor.id}-${idx}`} className="px-4 py-3 space-y-1.5">
-                        <div className="flex items-center justify-between gap-2">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            {s.in ? (
-                              <button
-                                type="button"
-                                onClick={() => setModal({ mode: 'modify', target: { effective_id: s.in!.id, kind: s.in!.kind, effective_time: s.in!.effective_time } })}
-                                className={timeBoxBase}
-                                title={t('editRequest.requestModifyTitle')}
-                              >
-                                {formatTime(s.in.effective_time)}
-                              </button>
-                            ) : (
-                              <button
-                                type="button"
-                                onClick={() => setModal({ mode: 'add', kind: 'in' })}
-                                className={addChipBase}
-                                title={t('editRequest.requestAddTitle')}
-                              >
-                                ⚠️ {t('admin.shifts.strayOut')}
-                              </button>
-                            )}
-                            <span className="text-slate-400 px-1">–</span>
-                            {s.out ? (
-                              <button
-                                type="button"
-                                onClick={() => setModal({ mode: 'modify', target: { effective_id: s.out!.id, kind: s.out!.kind, effective_time: s.out!.effective_time } })}
-                                className={timeBoxBase}
-                                title={t('editRequest.requestModifyTitle')}
-                              >
-                                {formatTime(s.out.effective_time)}
-                              </button>
-                            ) : (
-                              <button
-                                type="button"
-                                onClick={() => setModal({ mode: 'add', kind: 'out' })}
-                                className={addChipBase}
-                                title={t('editRequest.requestAddTitle')}
-                              >
-                                ⚠️ {t('admin.shifts.openShift')}
-                              </button>
-                            )}
-                          </div>
-                          {rowTargets.length > 0 && (
-                            <button
-                              type="button"
-                              onClick={() => setModal({ mode: 'delete', targets: rowTargets })}
-                              className="h-7 w-7 shrink-0 inline-flex items-center justify-center rounded-md text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition"
-                              title={t('editRequest.requestDeleteTitle')}
-                              aria-label={t('editRequest.requestDeleteTitle')}
-                            >
-                              ✕
-                            </button>
-                          )}
-                        </div>
-                        {fragments.length > 0 && (
-                          <div className="text-xs text-amber-700 leading-snug font-mono tabular-nums pl-1">
-                            ⏳ {fragments.join('  ·  ')}
-                          </div>
-                        )}
-                      </li>
-                    );
-                  })}
+                  {dayShifts.map((s, idx) => (
+                    <ShiftRow
+                      key={`${(s.in ?? s.out!).id}-${idx}`}
+                      s={s}
+                      t={t}
+                      pendingByTarget={pendingByTarget}
+                      pendingAddByDayKind={pendingAddByDayKind}
+                      onModify={(p) => setModal({ mode: 'modify', target: { effective_id: p.id, kind: p.kind, effective_time: p.effective_time } })}
+                      onAdd={(kind) => setModal({ mode: 'add', kind })}
+                      onDelete={(targets) => setModal({ mode: 'delete', targets })}
+                    />
+                  ))}
                 </ul>
               </div>
             );
