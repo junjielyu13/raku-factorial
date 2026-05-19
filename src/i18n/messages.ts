@@ -3,10 +3,11 @@
 
 export type Lang = 'zh' | 'en' | 'es';
 
+// Display order of the language picker: Spanish, Chinese, English.
 export const LANGS: { code: Lang; label: string }[] = [
+  { code: 'es', label: 'Español' },
   { code: 'zh', label: '中文' },
   { code: 'en', label: 'English' },
-  { code: 'es', label: 'Español' },
 ];
 
 export const LOCALE: Record<Lang, string> = {
