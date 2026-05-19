@@ -196,8 +196,8 @@ function warningCount(p: Row, offices: OfficeCoords[]): number {
   return (timeBad ? 1 : 0) + (locBad ? 1 : 0);
 }
 
-// Warning pills for one punch. Two or more pills collapse behind a single
-// ⚠️ icon so rows don't get cluttered; clicking the icon expands them.
+// Warning pills for one punch. They stay collapsed behind a single ⚠️ icon
+// so rows don't get cluttered; clicking the icon toggles the full pills.
 function PunchBadges({
   p,
   offices,
@@ -211,43 +211,26 @@ function PunchBadges({
   const count = warningCount(p, offices);
   if (count === 0) return null;
 
-  const pills = (
-    <>
-      <TimeWarnPill p={p} t={t} />
-      <LocationPill p={p} offices={offices} t={t} />
-    </>
-  );
-
-  if (count === 1) {
-    return <div className="flex flex-wrap gap-1">{pills}</div>;
-  }
-
-  if (!open) {
-    return (
+  return (
+    <div className="flex flex-wrap items-center gap-1">
       <button
         type="button"
-        onClick={() => setOpen(true)}
-        className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-amber-100 text-amber-800 text-xs font-medium hover:bg-amber-200 transition"
-        title={t('admin.warningsExpand')}
-        aria-label={t('admin.warningsExpand')}
+        onClick={() => setOpen(o => !o)}
+        aria-expanded={open}
+        title={t(open ? 'admin.warningsCollapse' : 'admin.warningsExpand')}
+        aria-label={t(open ? 'admin.warningsCollapse' : 'admin.warningsExpand')}
+        className={`inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium transition ${
+          open ? 'bg-amber-200 text-amber-900' : 'bg-amber-100 text-amber-800 hover:bg-amber-200'
+        }`}
       >
         ⚠️ {count}
       </button>
-    );
-  }
-
-  return (
-    <div className="flex flex-wrap items-center gap-1">
-      {pills}
-      <button
-        type="button"
-        onClick={() => setOpen(false)}
-        className="inline-flex h-6 w-6 items-center justify-center rounded-md text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition"
-        title={t('admin.warningsCollapse')}
-        aria-label={t('admin.warningsCollapse')}
-      >
-        ✕
-      </button>
+      {open && (
+        <>
+          <TimeWarnPill p={p} t={t} />
+          <LocationPill p={p} offices={offices} t={t} />
+        </>
+      )}
     </div>
   );
 }
