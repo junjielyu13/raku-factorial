@@ -27,8 +27,48 @@ interface PendingReq {
 
 type Tfn = (key: string, vars?: Record<string, string | number>) => string;
 
-// One shift row: time pair on top, optional collapsed ⏳ icon below that
-// expands to show the pending-request summary on click.
+// One pending marker per time box. Holds its own open/closed state so each
+// side (in / out) toggles independently. The fragment hangs in a popover so
+// expanding doesn't push the time row layout.
+function PendingMarker({
+  pending,
+  isAdd,
+  t,
+}: {
+  pending: PendingReq;
+  isAdd: boolean;
+  t: Tfn;
+}) {
+  const [open, setOpen] = useState(false);
+  let fragment: string;
+  if (isAdd) fragment = `+ ${formatTime(pending.requested_time)}`;
+  else if (pending.action === 'modify') fragment = `→ ${formatTime(pending.requested_time)}`;
+  else fragment = t('history.deleteLabel');
+  return (
+    <div className="relative inline-block">
+      <button
+        type="button"
+        onClick={() => setOpen(o => !o)}
+        aria-expanded={open}
+        title={t('history.pendingToggle')}
+        aria-label={t('history.pendingToggle')}
+        className={`inline-flex h-5 w-5 items-center justify-center rounded-md text-xs transition ${
+          open ? 'bg-amber-200 text-amber-900' : 'bg-amber-100 text-amber-800 hover:bg-amber-200'
+        }`}
+      >
+        ⏳
+      </button>
+      {open && (
+        <span className="absolute left-0 top-full mt-1 px-2 py-1 rounded-md bg-amber-100 text-amber-800 text-xs font-mono tabular-nums whitespace-nowrap ring-1 ring-amber-200 shadow-sm z-10">
+          {fragment}
+        </span>
+      )}
+    </div>
+  );
+}
+
+// One shift row: 3-column grid with row 1 = time pair (or stray/open chip),
+// row 2 = per-side pending icons aligned under each time box.
 function ShiftRow({
   s,
   t,
@@ -46,36 +86,23 @@ function ShiftRow({
   onAdd: (kind: 'in' | 'out') => void;
   onDelete: (targets: EditTarget[]) => void;
 }) {
-  const [open, setOpen] = useState(false);
-  const inPending  = s.in  ? pendingByTarget.get(s.in.id)  : null;
-  const outPending = s.out ? pendingByTarget.get(s.out.id) : null;
-  const addInPending  = !s.in  ? pendingAddByDayKind.get(`${s.date}|in`)  : null;
-  const addOutPending = !s.out ? pendingAddByDayKind.get(`${s.date}|out`) : null;
+  // Pending request relevant to each side: modify/delete on a present punch,
+  // or a pending add filling in the missing punch of an incomplete shift.
+  const inPending  = s.in  ? pendingByTarget.get(s.in.id)  ?? null : (pendingAddByDayKind.get(`${s.date}|in`)  ?? null);
+  const outPending = s.out ? pendingByTarget.get(s.out.id) ?? null : (pendingAddByDayKind.get(`${s.date}|out`) ?? null);
   const rowTargets: EditTarget[] = [
     ...(s.in ? [{ effective_id: s.in.id, kind: s.in.kind, effective_time: s.in.effective_time }] : []),
     ...(s.out ? [{ effective_id: s.out.id, kind: s.out.kind, effective_time: s.out.effective_time }] : []),
   ];
 
-  const kindLabel = (k: 'in' | 'out') => t(`punch.${k}`);
-  const fragments: string[] = [];
-  if (addInPending)  fragments.push(`+ ${kindLabel('in')}  ${formatTime(addInPending.requested_time)}`);
-  if (addOutPending) fragments.push(`+ ${kindLabel('out')} ${formatTime(addOutPending.requested_time)}`);
-  if (inPending?.action === 'modify')  fragments.push(`${kindLabel('in')}  → ${formatTime(inPending.requested_time)}`);
-  if (outPending?.action === 'modify') fragments.push(`${kindLabel('out')} → ${formatTime(outPending.requested_time)}`);
-  if (inPending?.action === 'delete' && outPending?.action === 'delete') {
-    fragments.push(`− ${kindLabel('in')} · − ${kindLabel('out')}`);
-  } else {
-    if (inPending?.action === 'delete')  fragments.push(`− ${kindLabel('in')}`);
-    if (outPending?.action === 'delete') fragments.push(`− ${kindLabel('out')}`);
-  }
-
   const timeBoxBase = 'inline-flex items-center px-3 py-1.5 rounded-md bg-white ring-1 ring-slate-200 font-mono tabular-nums text-slate-900 text-sm hover:bg-slate-50 hover:ring-emerald-400 transition';
   const addChipBase = 'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-amber-100 text-amber-800 text-sm font-medium hover:bg-amber-200 transition';
 
   return (
-    <li className="px-4 py-3 space-y-1.5">
-      <div className="flex items-center justify-between gap-2">
-        <div className="flex items-center gap-2 flex-wrap">
+    <li className="px-4 py-3">
+      <div className="flex items-start justify-between gap-2">
+        <div className="grid grid-cols-[auto_auto_auto] gap-x-2 gap-y-1 items-center">
+          {/* Row 1: time pair */}
           {s.in ? (
             <button type="button" onClick={() => onModify(s.in!)} className={timeBoxBase} title={t('editRequest.requestModifyTitle')}>
               {formatTime(s.in.effective_time)}
@@ -95,6 +122,19 @@ function ShiftRow({
               ⚠️ {t('admin.shifts.openShift')}
             </button>
           )}
+
+          {/* Row 2: per-side pending markers (only when at least one exists). */}
+          {(inPending || outPending) && (
+            <>
+              <div className="justify-self-start">
+                {inPending && <PendingMarker pending={inPending} isAdd={!s.in} t={t} />}
+              </div>
+              <span />
+              <div className="justify-self-start">
+                {outPending && <PendingMarker pending={outPending} isAdd={!s.out} t={t} />}
+              </div>
+            </>
+          )}
         </div>
         {rowTargets.length > 0 && (
           <button
@@ -108,28 +148,6 @@ function ShiftRow({
           </button>
         )}
       </div>
-
-      {fragments.length > 0 && (
-        <div className="flex items-center gap-2 pl-1">
-          <button
-            type="button"
-            onClick={() => setOpen(o => !o)}
-            aria-expanded={open}
-            title={t('history.pendingToggle')}
-            aria-label={t('history.pendingToggle')}
-            className={`inline-flex h-5 w-5 items-center justify-center rounded-md text-xs transition ${
-              open ? 'bg-amber-200 text-amber-900' : 'bg-amber-100 text-amber-800 hover:bg-amber-200'
-            }`}
-          >
-            ⏳
-          </button>
-          {open && (
-            <span className="text-xs text-amber-700 leading-snug font-mono tabular-nums">
-              {fragments.join('  ·  ')}
-            </span>
-          )}
-        </div>
-      )}
     </li>
   );
 }

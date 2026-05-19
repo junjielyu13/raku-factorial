@@ -68,6 +68,7 @@ interface Messages {
     total: string;       // uses {h}, {m}
     rangeTotal: string;  // uses {h}, {m}
     pendingToggle: string;
+    deleteLabel: string;
   };
   editRequest: {
     title: string;
@@ -244,6 +245,7 @@ export const MESSAGES: Record<Lang, Messages> = {
       total: '共 {h} 小时 {m} 分',
       rangeTotal: '合计 {h} 小时 {m} 分',
       pendingToggle: '查看待审批申请',
+      deleteLabel: '删除',
     },
     editRequest: {
       title: '补卡申请',
@@ -434,6 +436,7 @@ export const MESSAGES: Record<Lang, Messages> = {
       total: 'Total {h}h {m}m',
       rangeTotal: 'Total {h}h {m}m',
       pendingToggle: 'Show pending request',
+      deleteLabel: 'Delete',
     },
     editRequest: {
       title: 'Punch correction request',
@@ -624,6 +627,7 @@ export const MESSAGES: Record<Lang, Messages> = {
       total: 'Total {h} h {m} min',
       rangeTotal: 'Total {h} h {m} min',
       pendingToggle: 'Ver solicitud pendiente',
+      deleteLabel: 'Borrar',
     },
     editRequest: {
       title: 'Solicitud de corrección',
