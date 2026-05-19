@@ -3,8 +3,9 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../auth/useAuth';
-import { formatDate, formatTime, madridDayRange, madridDayKeyOf, madridTodayKey } from '../lib/time';
-import { workedMsForDay, msToHm } from '../lib/worked';
+import { formatDate, formatTime, madridDayRange, madridTodayKey } from '../lib/time';
+import { pairShifts, msToHm } from '../lib/worked';
+import type { ShiftPair } from '../lib/worked';
 import { useTranslation } from '../i18n/LanguageContext';
 import type { EffectivePunch } from '../lib/types';
 
@@ -40,7 +41,7 @@ export function EmployeeHistory() {
       q = q.gte('effective_time', since);
     }
 
-    q.order('effective_time', { ascending: false })
+    q.order('effective_time', { ascending: true })
       .then(({ data }) => { setRows((data as EffectivePunch[]) ?? []); setLoading(false); });
   }, [profile, filter, selectedDate]);
 
@@ -48,38 +49,38 @@ export function EmployeeHistory() {
   useEffect(() => { setPage(0); }, [filter, selectedDate, pageSize]);
 
   const todayKey = madridTodayKey();
+  const shifts = useMemo(() => pairShifts(rows), [rows]);
 
-  // Per-day totals computed from the FULL set so they don't change as you paginate.
+  // Per-day totals from the FULL shift set so they don't change as you paginate.
   const dayTotalsMs = useMemo(() => {
-    const byDay = new Map<string, EffectivePunch[]>();
-    for (const r of rows) {
-      const k = madridDayKeyOf(r.effective_time);
-      if (!byDay.has(k)) byDay.set(k, []);
-      byDay.get(k)!.push(r);
+    const m = new Map<string, number>();
+    for (const s of shifts) {
+      let ms = 0;
+      if (s.in && s.out) {
+        ms = new Date(s.out.effective_time).getTime() - new Date(s.in.effective_time).getTime();
+      } else if (s.isOpen && s.in && s.date === todayKey) {
+        ms = Math.max(0, Date.now() - new Date(s.in.effective_time).getTime());
+      }
+      m.set(s.date, (m.get(s.date) ?? 0) + ms);
     }
-    const out = new Map<string, number>();
-    for (const [k, items] of byDay) {
-      out.set(k, workedMsForDay(items, k === todayKey ? Date.now() : null));
-    }
-    return out;
-  }, [rows, todayKey]);
+    return m;
+  }, [shifts, todayKey]);
 
   const rangeTotal = msToHm(Array.from(dayTotalsMs.values()).reduce((a, b) => a + b, 0));
 
-  const totalPages = Math.max(1, Math.ceil(rows.length / pageSize));
+  const totalPages = Math.max(1, Math.ceil(shifts.length / pageSize));
   const safePage = Math.min(page, totalPages - 1);
-  const pagedRows = rows.slice(safePage * pageSize, (safePage + 1) * pageSize);
+  const pagedShifts = shifts.slice(safePage * pageSize, (safePage + 1) * pageSize);
 
-  // Group the paginated slice for rendering (day totals come from dayTotalsMs).
-  const groups = useMemo(() => {
-    const m = new Map<string, EffectivePunch[]>();
-    for (const r of pagedRows) {
-      const k = madridDayKeyOf(r.effective_time);
-      if (!m.has(k)) m.set(k, []);
-      m.get(k)!.push(r);
+  // Group paginated shifts by day for rendering (day totals stay from full set).
+  const grouped = useMemo(() => {
+    const m = new Map<string, ShiftPair<EffectivePunch>[]>();
+    for (const s of pagedShifts) {
+      if (!m.has(s.date)) m.set(s.date, []);
+      m.get(s.date)!.push(s);
     }
     return Array.from(m.entries());
-  }, [pagedRows]);
+  }, [pagedShifts]);
 
   return (
     <div className="min-h-full max-w-md mx-auto px-4 py-6 space-y-4">
@@ -119,10 +120,10 @@ export function EmployeeHistory() {
 
       {loading ? (
         <div className="app-card px-4 py-6 text-center text-slate-500 text-sm">{t('common.loading')}</div>
-      ) : rows.length === 0 ? (
+      ) : shifts.length === 0 ? (
         <div className="app-card px-4 py-6 text-center text-slate-500 text-sm">{t('history.noRecords')}</div>
       ) : (
-        <div className="space-y-4">
+        <div className="space-y-3">
           {filter !== 'day' && (
             <div className="app-card px-4 py-3 flex items-center justify-between">
               <span className="text-sm text-slate-600">{t(`history.filter.${filter}`)}</span>
@@ -131,30 +132,51 @@ export function EmployeeHistory() {
               </span>
             </div>
           )}
-          {groups.map(([dayKey, items]) => {
-            const dayTotal = msToHm(dayTotalsMs.get(dayKey) ?? 0);
+          {grouped.map(([date, dayShifts]) => {
+            const dayHm = msToHm(dayTotalsMs.get(date) ?? 0);
+            const dayAnchor = dayShifts[0].in ?? dayShifts[0].out!;
             return (
-              <section key={dayKey} className="space-y-2">
-                <div className="px-1 flex items-baseline justify-between gap-2">
-                  <h2 className="text-xs font-semibold uppercase tracking-wider text-slate-500">
-                    {formatDate(items[0].effective_time)}
-                  </h2>
-                  <span className="text-xs font-medium text-slate-600 tabular-nums">
-                    {t('history.total', { h: dayTotal.h, m: dayTotal.m })}
-                  </span>
-                </div>
-                <ul className="app-card divide-y divide-slate-100 overflow-hidden">
-                  {items.map(r => (
-                    <li key={r.id} className="px-4 py-3 flex items-center gap-3">
-                      <span className={`inline-flex items-center justify-center h-8 w-8 rounded-full text-xs font-semibold ${r.kind === 'in' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
-                        {r.kind === 'in' ? '▶' : '■'}
-                      </span>
-                      <span className="text-slate-700 flex-1">{r.kind === 'in' ? t('punch.in') : t('punch.out')}</span>
-                      <span className="font-mono tabular-nums text-slate-900">{formatTime(r.effective_time)}</span>
-                    </li>
-                  ))}
+              <div key={date} className="app-card overflow-hidden">
+                <header className="px-4 py-3 border-b border-slate-100 flex items-center justify-between gap-3 bg-slate-50/60">
+                  <div className="text-sm font-semibold text-slate-900">{formatDate(dayAnchor.effective_time)}</div>
+                  <div className="flex items-center gap-1.5 text-sm text-slate-700">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4 text-slate-500" aria-hidden="true">
+                      <circle cx="12" cy="13" r="8" />
+                      <path d="M12 9v4l2 2" />
+                      <path d="M9 2h6" />
+                    </svg>
+                    <span className="font-mono tabular-nums">{t('admin.stats.hours', { h: dayHm.h, m: dayHm.m })}</span>
+                  </div>
+                </header>
+                <ul className="divide-y divide-slate-100">
+                  {dayShifts.map((s, idx) => {
+                    const anchor = s.in ?? s.out!;
+                    return (
+                      <li key={`${anchor.id}-${idx}`} className="px-4 py-3">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          {s.in ? (
+                            <span className="inline-flex items-center px-3 py-1.5 rounded-md bg-white ring-1 ring-slate-200 font-mono tabular-nums text-slate-900 text-sm">
+                              {formatTime(s.in.effective_time)}
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center px-3 py-1.5 rounded-md bg-slate-50 ring-1 ring-slate-200 text-slate-400 text-sm">—</span>
+                          )}
+                          <span className="text-slate-400 px-1">–</span>
+                          {s.out ? (
+                            <span className="inline-flex items-center px-3 py-1.5 rounded-md bg-white ring-1 ring-slate-200 font-mono tabular-nums text-slate-900 text-sm">
+                              {formatTime(s.out.effective_time)}
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-amber-100 text-amber-800 text-sm font-medium">
+                              ⚠️ {t('admin.shifts.openShift')}
+                            </span>
+                          )}
+                        </div>
+                      </li>
+                    );
+                  })}
                 </ul>
-              </section>
+              </div>
             );
           })}
 
