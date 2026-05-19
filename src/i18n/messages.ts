@@ -141,6 +141,10 @@ interface Messages {
       approveFailed: string; // uses {code}
       rejectFailed: string;  // uses {code}
       pendingBadge: string;  // uses {count}
+      action: { add: string; modify: string; delete: string };
+      originalLabel: string;
+      requestedLabel: string;
+      targetLabel: string;
     };
     export: {
       title: string;
@@ -318,6 +322,10 @@ export const MESSAGES: Record<Lang, Messages> = {
         approveFailed: '通过失败：{code}',
         rejectFailed: '拒绝失败：{code}',
         pendingBadge: '{count} 个待审批',
+        action: { add: '新增', modify: '修改', delete: '删除' },
+        originalLabel: '原时间：',
+        requestedLabel: '申请时间：',
+        targetLabel: '目标记录：',
       },
       export: {
         title: '导出月度 CSV',
@@ -503,6 +511,10 @@ export const MESSAGES: Record<Lang, Messages> = {
         approveFailed: 'Approve failed: {code}',
         rejectFailed: 'Reject failed: {code}',
         pendingBadge: '{count} pending',
+        action: { add: 'Add', modify: 'Modify', delete: 'Delete' },
+        originalLabel: 'Original:',
+        requestedLabel: 'Requested:',
+        targetLabel: 'Target:',
       },
       export: {
         title: 'Export monthly CSV',
@@ -688,6 +700,10 @@ export const MESSAGES: Record<Lang, Messages> = {
         approveFailed: 'Error al aprobar: {code}',
         rejectFailed: 'Error al rechazar: {code}',
         pendingBadge: '{count} pendientes',
+        action: { add: 'Añadir', modify: 'Modificar', delete: 'Eliminar' },
+        originalLabel: 'Original:',
+        requestedLabel: 'Solicitada:',
+        targetLabel: 'Registro:',
       },
       export: {
         title: 'Exportar CSV mensual',
