@@ -180,7 +180,7 @@ function TimeWarnPill({
   if (isPunchTimeNormal(p.kind, p.effective_time)) return null;
   return (
     <span className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-amber-100 text-amber-800 text-xs">
-      ⚠️ {t('admin.abnormalTime')}
+      ⚠️ {t(p.kind === 'in' ? 'admin.abnormalTimeIn' : 'admin.abnormalTimeOut')}
     </span>
   );
 }
