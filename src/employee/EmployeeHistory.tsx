@@ -203,100 +203,78 @@ export function EmployeeHistory() {
                     const outPending = s.out ? pendingByTarget.get(s.out.id) : null;
                     const addInPending  = !s.in  ? pendingAddByDayKind.get(`${s.date}|in`)  : null;
                     const addOutPending = !s.out ? pendingAddByDayKind.get(`${s.date}|out`) : null;
-                    const hasPendingDelete = inPending?.action === 'delete' || outPending?.action === 'delete';
                     const rowTargets: EditTarget[] = [
                       ...(s.in ? [{ effective_id: s.in.id, kind: s.in.kind, effective_time: s.in.effective_time }] : []),
                       ...(s.out ? [{ effective_id: s.out.id, kind: s.out.kind, effective_time: s.out.effective_time }] : []),
                     ];
+
+                    // Pending overlay lives in a thin footer line below the time row.
+                    // Time boxes stay clean so they never wrap.
+                    const fragments: string[] = [];
+                    const kindLabel = (k: 'in' | 'out') => t(`punch.${k}`);
+                    if (addInPending)  fragments.push(`+ ${kindLabel('in')}  ${formatTime(addInPending.requested_time)}`);
+                    if (addOutPending) fragments.push(`+ ${kindLabel('out')} ${formatTime(addOutPending.requested_time)}`);
+                    if (inPending?.action === 'modify')  fragments.push(`${kindLabel('in')}  → ${formatTime(inPending.requested_time)}`);
+                    if (outPending?.action === 'modify') fragments.push(`${kindLabel('out')} → ${formatTime(outPending.requested_time)}`);
+                    if (inPending?.action === 'delete' && outPending?.action === 'delete') {
+                      fragments.push(`− ${kindLabel('in')} · − ${kindLabel('out')}`);
+                    } else {
+                      if (inPending?.action === 'delete')  fragments.push(`− ${kindLabel('in')}`);
+                      if (outPending?.action === 'delete') fragments.push(`− ${kindLabel('out')}`);
+                    }
+
                     const timeBoxBase = 'inline-flex items-center px-3 py-1.5 rounded-md bg-white ring-1 ring-slate-200 font-mono tabular-nums text-slate-900 text-sm hover:bg-slate-50 hover:ring-emerald-400 transition';
                     const addChipBase = 'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-amber-100 text-amber-800 text-sm font-medium hover:bg-amber-200 transition';
-                    const modifyBadge = 'inline-flex items-center gap-1 px-2 py-1 rounded-md bg-amber-100 text-amber-800 text-xs font-mono tabular-nums';
+
                     return (
-                      <li key={`${anchor.id}-${idx}`} className="px-4 py-3 flex items-center justify-between gap-2">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          {s.in ? (
-                            <>
+                      <li key={`${anchor.id}-${idx}`} className="px-4 py-3 space-y-1.5">
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            {s.in ? (
                               <button
                                 type="button"
                                 onClick={() => setModal({ mode: 'modify', target: { effective_id: s.in!.id, kind: s.in!.kind, effective_time: s.in!.effective_time } })}
-                                className={`${timeBoxBase} ${inPending?.action === 'delete' ? 'opacity-60 line-through' : ''}`}
+                                className={timeBoxBase}
                                 title={t('editRequest.requestModifyTitle')}
                               >
                                 {formatTime(s.in.effective_time)}
                               </button>
-                              {inPending?.action === 'modify' && (
-                                <span className={modifyBadge} title={t('editRequest.requestModifyTitle')}>
-                                  ⏳ → {formatTime(inPending.requested_time)}
-                                </span>
-                              )}
-                            </>
-                          ) : addInPending ? (
-                            <button
-                              type="button"
-                              onClick={() => setModal({ mode: 'add', kind: 'in' })}
-                              className={addChipBase}
-                              title={t('editRequest.requestAddTitle')}
-                            >
-                              ⏳ {t('history.pendingAdd', { time: formatTime(addInPending.requested_time) })}
-                            </button>
-                          ) : (
-                            <button
-                              type="button"
-                              onClick={() => setModal({ mode: 'add', kind: 'in' })}
-                              className={addChipBase}
-                              title={t('editRequest.requestAddTitle')}
-                            >
-                              ⚠️ {t('admin.shifts.strayOut')}
-                            </button>
-                          )}
-                          <span className="text-slate-400 px-1">–</span>
-                          {s.out ? (
-                            <>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => setModal({ mode: 'add', kind: 'in' })}
+                                className={addChipBase}
+                                title={t('editRequest.requestAddTitle')}
+                              >
+                                ⚠️ {t('admin.shifts.strayOut')}
+                              </button>
+                            )}
+                            <span className="text-slate-400 px-1">–</span>
+                            {s.out ? (
                               <button
                                 type="button"
                                 onClick={() => setModal({ mode: 'modify', target: { effective_id: s.out!.id, kind: s.out!.kind, effective_time: s.out!.effective_time } })}
-                                className={`${timeBoxBase} ${outPending?.action === 'delete' ? 'opacity-60 line-through' : ''}`}
+                                className={timeBoxBase}
                                 title={t('editRequest.requestModifyTitle')}
                               >
                                 {formatTime(s.out.effective_time)}
                               </button>
-                              {outPending?.action === 'modify' && (
-                                <span className={modifyBadge} title={t('editRequest.requestModifyTitle')}>
-                                  ⏳ → {formatTime(outPending.requested_time)}
-                                </span>
-                              )}
-                            </>
-                          ) : addOutPending ? (
-                            <button
-                              type="button"
-                              onClick={() => setModal({ mode: 'add', kind: 'out' })}
-                              className={addChipBase}
-                              title={t('editRequest.requestAddTitle')}
-                            >
-                              ⏳ {t('history.pendingAdd', { time: formatTime(addOutPending.requested_time) })}
-                            </button>
-                          ) : (
-                            <button
-                              type="button"
-                              onClick={() => setModal({ mode: 'add', kind: 'out' })}
-                              className={addChipBase}
-                              title={t('editRequest.requestAddTitle')}
-                            >
-                              ⚠️ {t('admin.shifts.openShift')}
-                            </button>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-2 shrink-0">
-                          {hasPendingDelete && (
-                            <span className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-amber-100 text-amber-800 text-xs">
-                              ⏳ {t('history.pendingDelete')}
-                            </span>
-                          )}
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => setModal({ mode: 'add', kind: 'out' })}
+                                className={addChipBase}
+                                title={t('editRequest.requestAddTitle')}
+                              >
+                                ⚠️ {t('admin.shifts.openShift')}
+                              </button>
+                            )}
+                          </div>
                           {rowTargets.length > 0 && (
                             <button
                               type="button"
                               onClick={() => setModal({ mode: 'delete', targets: rowTargets })}
-                              className="h-7 w-7 inline-flex items-center justify-center rounded-md text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition"
+                              className="h-7 w-7 shrink-0 inline-flex items-center justify-center rounded-md text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition"
                               title={t('editRequest.requestDeleteTitle')}
                               aria-label={t('editRequest.requestDeleteTitle')}
                             >
@@ -304,6 +282,11 @@ export function EmployeeHistory() {
                             </button>
                           )}
                         </div>
+                        {fragments.length > 0 && (
+                          <div className="text-xs text-amber-700 leading-snug font-mono tabular-nums pl-1">
+                            ⏳ {fragments.join('  ·  ')}
+                          </div>
+                        )}
                       </li>
                     );
                   })}
