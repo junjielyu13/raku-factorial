@@ -87,6 +87,18 @@ interface Messages {
     pendingHint: string;
     errors: Record<string, string>;
   };
+  myRequests: {
+    title: string;
+    button: string;
+    none: string;
+    submittedAt: string; // uses {time}
+    status: {
+      pending: string;
+      approved: string;
+      rejected: string;
+      superseded: string;
+    };
+  };
   admin: {
     todayTitle: string;
     approvalsLink: string;
@@ -273,6 +285,18 @@ export const MESSAGES: Record<Lang, Messages> = {
         NOT_OWNER: '只能申请修改自己的打卡。',
         ALREADY_SUPERSEDED: '这条打卡已被修改过，请刷新后重试。',
         UNKNOWN: '提交失败：{code}',
+      },
+    },
+    myRequests: {
+      title: '我的申请',
+      button: '我的申请',
+      none: '暂无申请',
+      submittedAt: '提交于 {time}',
+      status: {
+        pending: '待审批',
+        approved: '已通过',
+        rejected: '已拒绝',
+        superseded: '已被新申请替代',
       },
     },
     admin: {
@@ -466,6 +490,18 @@ export const MESSAGES: Record<Lang, Messages> = {
         UNKNOWN: 'Submit failed: {code}',
       },
     },
+    myRequests: {
+      title: 'My requests',
+      button: 'My requests',
+      none: 'No requests',
+      submittedAt: 'Submitted {time}',
+      status: {
+        pending: 'Pending',
+        approved: 'Approved',
+        rejected: 'Rejected',
+        superseded: 'Replaced',
+      },
+    },
     admin: {
       todayTitle: 'Punches',
       dateLabel: 'Date',
@@ -655,6 +691,18 @@ export const MESSAGES: Record<Lang, Messages> = {
         NOT_OWNER: 'Solo puedes solicitar cambios en tus propios fichajes.',
         ALREADY_SUPERSEDED: 'Este fichaje ya fue corregido. Actualiza y vuelve a intentarlo.',
         UNKNOWN: 'Envío fallido: {code}',
+      },
+    },
+    myRequests: {
+      title: 'Mis solicitudes',
+      button: 'Mis solicitudes',
+      none: 'Sin solicitudes',
+      submittedAt: 'Enviada {time}',
+      status: {
+        pending: 'Pendiente',
+        approved: 'Aprobada',
+        rejected: 'Rechazada',
+        superseded: 'Reemplazada',
       },
     },
     admin: {
