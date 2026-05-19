@@ -489,7 +489,9 @@ export function AdminDashboard() {
                 {s.in ? (
                   <TimeBox p={s.in} onModify={() => setModal({ mode: 'modify', target: targetOf(s.in!) })} />
                 ) : (
-                  <span className="inline-flex items-center px-3 py-1.5 rounded-md bg-slate-50 ring-1 ring-slate-200 text-slate-400 text-sm">—</span>
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-amber-100 text-amber-800 text-sm font-medium">
+                    ⚠️ {t('admin.shifts.strayOut')}
+                  </span>
                 )}
                 <span className="text-slate-400 self-center px-1">–</span>
                 {s.out ? (

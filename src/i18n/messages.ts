@@ -282,7 +282,7 @@ export const MESSAGES: Record<Lang, Messages> = {
         outCol: '下班',
         durationCol: '时长',
         openShift: '未下班',
-        strayOut: '无对应上班',
+        strayOut: '未上班',
       },
       approvals: {
         title: '待审批的补卡申请',
@@ -450,7 +450,7 @@ export const MESSAGES: Record<Lang, Messages> = {
         outCol: 'Clock out',
         durationCol: 'Duration',
         openShift: 'Not clocked out',
-        strayOut: 'No matching clock-in',
+        strayOut: 'Not clocked in',
       },
       approvals: {
         title: 'Pending correction requests',
@@ -618,7 +618,7 @@ export const MESSAGES: Record<Lang, Messages> = {
         outCol: 'Salida',
         durationCol: 'Duración',
         openShift: 'Sin salida',
-        strayOut: 'Sin entrada asociada',
+        strayOut: 'Sin entrada',
       },
       approvals: {
         title: 'Solicitudes pendientes',
