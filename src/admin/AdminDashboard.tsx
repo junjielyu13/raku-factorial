@@ -297,6 +297,7 @@ export function AdminDashboard() {
   const [page, setPage] = useState(0);
   const [modal, setModal] = useState<ModalState | null>(null);
   const [showRules, setShowRules] = useState(false);
+  const [pendingApprovals, setPendingApprovals] = useState(0);
 
   // Reset to first page when filter inputs or page size change.
   useEffect(() => {
@@ -312,6 +313,25 @@ export function AdminDashboard() {
 
     supabase.from('employees').select('id, full_name').eq('active', true).order('full_name')
       .then(({ data }) => setEmployees((data as EmployeeOption[]) ?? []));
+  }, []);
+
+  // Pending edit-request count for the Approvals badge. Live via realtime so
+  // the badge updates as employees submit and admins approve/reject.
+  useEffect(() => {
+    async function loadCount() {
+      const { count } = await supabase
+        .from('punch_edit_requests')
+        .select('id', { count: 'exact', head: true })
+        .eq('status', 'pending');
+      setPendingApprovals(count ?? 0);
+    }
+    loadCount();
+    const ch = supabase.channel('punch-edit-requests-pending-count')
+      .on('postgres_changes',
+          { event: '*', schema: 'public', table: 'punch_edit_requests' },
+          () => loadCount())
+      .subscribe();
+    return () => { supabase.removeChannel(ch); };
   }, []);
 
   const fetchPunches = useCallback(async () => {
@@ -463,7 +483,17 @@ export function AdminDashboard() {
         </div>
         <nav className="flex items-center justify-between gap-2 flex-wrap border-t border-slate-200 pt-3">
           <div className="flex items-center gap-2 flex-wrap">
-            <Link to="/admin/approvals" className="app-btn-ghost">{t('admin.approvalsLink')}</Link>
+            <Link to="/admin/approvals" className="app-btn-ghost relative">
+              {t('admin.approvalsLink')}
+              {pendingApprovals > 0 && (
+                <span
+                  className="absolute -top-1.5 -right-1.5 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-rose-500 text-white text-[10px] font-bold leading-none ring-2 ring-white"
+                  aria-label={t('admin.approvals.pendingBadge', { count: pendingApprovals })}
+                >
+                  {pendingApprovals}
+                </span>
+              )}
+            </Link>
             <Link to="/admin/export" className="app-btn-ghost">{t('admin.exportLink')}</Link>
             <button type="button" onClick={() => setShowRules(true)} className="app-btn-ghost">
               {t('admin.rules.button')}

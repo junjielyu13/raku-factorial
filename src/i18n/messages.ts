@@ -138,6 +138,7 @@ interface Messages {
       reasonLabel: string;
       approveFailed: string; // uses {code}
       rejectFailed: string;  // uses {code}
+      pendingBadge: string;  // uses {count}
     };
     export: {
       title: string;
@@ -312,6 +313,7 @@ export const MESSAGES: Record<Lang, Messages> = {
         reasonLabel: '原因：',
         approveFailed: '通过失败：{code}',
         rejectFailed: '拒绝失败：{code}',
+        pendingBadge: '{count} 个待审批',
       },
       export: {
         title: '导出月度 CSV',
@@ -494,6 +496,7 @@ export const MESSAGES: Record<Lang, Messages> = {
         reasonLabel: 'Reason: ',
         approveFailed: 'Approve failed: {code}',
         rejectFailed: 'Reject failed: {code}',
+        pendingBadge: '{count} pending',
       },
       export: {
         title: 'Export monthly CSV',
@@ -676,6 +679,7 @@ export const MESSAGES: Record<Lang, Messages> = {
         reasonLabel: 'Motivo: ',
         approveFailed: 'Error al aprobar: {code}',
         rejectFailed: 'Error al rechazar: {code}',
+        pendingBadge: '{count} pendientes',
       },
       export: {
         title: 'Exportar CSV mensual',
