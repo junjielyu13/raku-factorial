@@ -3,7 +3,8 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { formatTime, formatDate, madridDayRange, madridDayKeyOf, madridTodayKey } from '../lib/time';
-import { workedMsForDay, msToHm } from '../lib/worked';
+import { workedMsForDay, msToHm, pairShifts } from '../lib/worked';
+import type { ShiftPair } from '../lib/worked';
 import { useTranslation } from '../i18n/LanguageContext';
 import { LanguagePicker } from '../components/LanguagePicker';
 import { LogoutButton } from '../components/LogoutButton';
@@ -32,43 +33,7 @@ type ModalState =
   | { mode: 'add' }
   | { mode: 'modify' | 'delete'; target: CorrectionTarget };
 
-interface Shift {
-  date: string;          // Madrid YYYY-MM-DD of the anchoring punch
-  in: Row | null;
-  out: Row | null;
-  isOpen: boolean;       // in punch with no matching out
-  isStrayOut: boolean;   // out punch with no preceding in
-}
-
-// Walk punches ascending and pair each `in` with the next `out`. A trailing
-// open `in` becomes an open shift (warning); an `out` with no preceding `in`
-// is recorded as a stray-out anomaly. Returned newest-first.
-function pairShifts(rows: Row[]): Shift[] {
-  const sorted = [...rows].sort(
-    (a, b) => new Date(a.effective_time).getTime() - new Date(b.effective_time).getTime(),
-  );
-  const shifts: Shift[] = [];
-  let openIn: Row | null = null;
-  for (const p of sorted) {
-    if (p.kind === 'in') {
-      if (openIn) {
-        shifts.push({ date: madridDayKeyOf(openIn.effective_time), in: openIn, out: null, isOpen: true, isStrayOut: false });
-      }
-      openIn = p;
-    } else {
-      if (openIn) {
-        shifts.push({ date: madridDayKeyOf(openIn.effective_time), in: openIn, out: p, isOpen: false, isStrayOut: false });
-        openIn = null;
-      } else {
-        shifts.push({ date: madridDayKeyOf(p.effective_time), in: null, out: p, isOpen: false, isStrayOut: true });
-      }
-    }
-  }
-  if (openIn) {
-    shifts.push({ date: madridDayKeyOf(openIn.effective_time), in: openIn, out: null, isOpen: true, isStrayOut: false });
-  }
-  return shifts.reverse();
-}
+type Shift = ShiftPair<Row>;
 
 // Pair shifts independently per employee, then merge sorted newest-first.
 // Pairing across employees would be wrong (e.g. one person's in matched
