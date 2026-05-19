@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
-import { formatTime, formatDate, formatDateTime, madridDayRange, madridDayKeyOf, madridTodayKey } from '../lib/time';
+import { formatTime, formatDate, madridDayRange, madridDayKeyOf, madridTodayKey } from '../lib/time';
 import { workedMsForDay, msToHm } from '../lib/worked';
 import { useTranslation } from '../i18n/LanguageContext';
 import { LanguagePicker } from '../components/LanguagePicker';
@@ -68,6 +68,27 @@ function pairShifts(rows: Row[]): Shift[] {
     shifts.push({ date: madridDayKeyOf(openIn.effective_time), in: openIn, out: null, isOpen: true, isStrayOut: false });
   }
   return shifts.reverse();
+}
+
+// Pair shifts independently per employee, then merge sorted newest-first.
+// Pairing across employees would be wrong (e.g. one person's in matched
+// with another person's out).
+function pairShiftsByEmployee(rows: Row[]): Shift[] {
+  const byEmp = new Map<string, Row[]>();
+  for (const r of rows) {
+    if (!byEmp.has(r.employee_id)) byEmp.set(r.employee_id, []);
+    byEmp.get(r.employee_id)!.push(r);
+  }
+  const all: Shift[] = [];
+  for (const empRows of byEmp.values()) {
+    all.push(...pairShifts(empRows));
+  }
+  all.sort((a, b) => {
+    const ta = new Date((a.in ?? a.out!).effective_time).getTime();
+    const tb = new Date((b.in ?? b.out!).effective_time).getTime();
+    return tb - ta;
+  });
+  return all;
 }
 
 const FAR_THRESHOLD_M = 2000;
@@ -229,40 +250,61 @@ export function AdminDashboard() {
 
   const isSingleEmployee = filterEmployeeId !== 'all';
   const shifts = useMemo(
-    () => (isSingleEmployee ? pairShifts(visibleRows) : []),
-    [isSingleEmployee, visibleRows],
+    () => pairShiftsByEmployee(visibleRows),
+    [visibleRows],
   );
 
-  const itemCount = isSingleEmployee ? shifts.length : visibleRows.length;
-  const totalPages = Math.max(1, Math.ceil(itemCount / pageSize));
+  const totalPages = Math.max(1, Math.ceil(shifts.length / pageSize));
   const safePage = Math.min(page, totalPages - 1);
-  const pagedRows = visibleRows.slice(safePage * pageSize, (safePage + 1) * pageSize);
   const pagedShifts = shifts.slice(safePage * pageSize, (safePage + 1) * pageSize);
 
-  // Per-day totals for the shift view, computed from the FULL shift set so
-  // the day header doesn't shift as you paginate.
   const todayKey = madridTodayKey();
+  function shiftMs(s: Shift): number {
+    if (s.in && s.out) {
+      return new Date(s.out.effective_time).getTime() - new Date(s.in.effective_time).getTime();
+    }
+    if (s.isOpen && s.in && s.date === todayKey) {
+      return Math.max(0, Date.now() - new Date(s.in.effective_time).getTime());
+    }
+    return 0;
+  }
+
+  // Per-day totals across all employees, computed from the FULL shift set so
+  // headers don't shift as you paginate.
   const shiftDayTotalsMs = useMemo(() => {
     const m = new Map<string, number>();
+    for (const s of shifts) m.set(s.date, (m.get(s.date) ?? 0) + shiftMs(s));
+    return m;
+  }, [shifts, todayKey]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Per-employee per-day totals (key: `${employeeId}|${date}`).
+  const shiftEmpDayTotalsMs = useMemo(() => {
+    const m = new Map<string, number>();
     for (const s of shifts) {
-      let add = 0;
-      if (s.in && s.out) {
-        add = new Date(s.out.effective_time).getTime() - new Date(s.in.effective_time).getTime();
-      } else if (s.isOpen && s.in && s.date === todayKey) {
-        add = Math.max(0, Date.now() - new Date(s.in.effective_time).getTime());
-      }
-      m.set(s.date, (m.get(s.date) ?? 0) + add);
+      const empId = (s.in ?? s.out!).employee_id;
+      const k = `${empId}|${s.date}`;
+      m.set(k, (m.get(k) ?? 0) + shiftMs(s));
     }
     return m;
-  }, [shifts, todayKey]);
+  }, [shifts, todayKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const pagedShiftsByDay = useMemo(() => {
-    const m = new Map<string, Shift[]>();
+  // Group paginated shifts by day, then by employee within each day.
+  const pagedShiftsGrouped = useMemo(() => {
+    const days = new Map<string, Map<string, { name: string; shifts: Shift[] }>>();
     for (const s of pagedShifts) {
-      if (!m.has(s.date)) m.set(s.date, []);
-      m.get(s.date)!.push(s);
+      const anchor = s.in ?? s.out!;
+      const empId = anchor.employee_id;
+      if (!days.has(s.date)) days.set(s.date, new Map());
+      const empMap = days.get(s.date)!;
+      if (!empMap.has(empId)) empMap.set(empId, { name: anchor.employee.full_name, shifts: [] });
+      empMap.get(empId)!.shifts.push(s);
     }
-    return Array.from(m.entries());
+    return Array.from(days.entries()).map(([date, empMap]) => ({
+      date,
+      employees: Array.from(empMap.entries())
+        .map(([empId, v]) => ({ empId, name: v.name, shifts: v.shifts }))
+        .sort((a, b) => a.name.localeCompare(b.name)),
+    }));
   }, [pagedShifts]);
 
   const stats = useMemo(() => {
@@ -470,175 +512,96 @@ export function AdminDashboard() {
           </>
         );
 
-        if (isSingleEmployee) {
-          return (
-            <div className="space-y-3">
-              {pagedShiftsByDay.map(([dayKey, daysShifts]) => {
-                const anchor = daysShifts[0].in ?? daysShifts[0].out!;
-                const hm = msToHm(shiftDayTotalsMs.get(dayKey) ?? 0);
-                return (
-                  <section key={dayKey} className="app-card overflow-hidden">
-                    <header className="px-4 py-3 border-b border-slate-100 flex items-center justify-between gap-3 bg-slate-50/60">
-                      <div className="text-sm font-semibold text-slate-900">{formatDate(anchor.effective_time)}</div>
-                      <div className="flex items-center gap-1.5 text-sm text-slate-700">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4 text-slate-500" aria-hidden="true">
-                          <circle cx="12" cy="13" r="8" />
-                          <path d="M12 9v4l2 2" />
-                          <path d="M9 2h6" />
-                        </svg>
-                        <span className="font-mono tabular-nums">{t('admin.stats.hours', { h: hm.h, m: hm.m })}</span>
-                      </div>
-                    </header>
-                    <ul className="divide-y divide-slate-100">
-                      {daysShifts.map((s, idx) => {
-                        const rowKeyAnchor = s.in ?? s.out!;
-                        return (
-                          <li key={`${rowKeyAnchor.id}-${idx}`} className="px-4 py-3">
-                            <div className="grid grid-cols-[auto_auto_auto] gap-x-2 gap-y-1.5 items-start w-fit max-w-full">
-                              {/* row 1: in / dash / out */}
-                              {s.in ? (
-                                <div className="flex items-center gap-1">
-                                  <TimeBox p={s.in} onModify={() => setModal({ mode: 'modify', target: targetOf(s.in!) })} />
-                                  <button
-                                    type="button"
-                                    onClick={() => setModal({ mode: 'delete', target: targetOf(s.in!) })}
-                                    className="h-7 w-7 inline-flex items-center justify-center rounded-md text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition"
-                                    title={`${t('admin.correct.delete')} · ${t('punch.in')}`}
-                                    aria-label={`${t('admin.correct.delete')} ${t('punch.in')}`}
-                                  >
-                                    ✕
-                                  </button>
-                                </div>
-                              ) : (
-                                <span className="inline-flex items-center px-3 py-1.5 rounded-md bg-slate-50 ring-1 ring-slate-200 text-slate-400 text-sm">—</span>
-                              )}
-                              <span className="text-slate-400 self-center px-1">–</span>
-                              {s.out ? (
-                                <div className="flex items-center gap-1">
-                                  <TimeBox p={s.out} onModify={() => setModal({ mode: 'modify', target: targetOf(s.out!) })} />
-                                  <button
-                                    type="button"
-                                    onClick={() => setModal({ mode: 'delete', target: targetOf(s.out!) })}
-                                    className="h-7 w-7 inline-flex items-center justify-center rounded-md text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition"
-                                    title={`${t('admin.correct.delete')} · ${t('punch.out')}`}
-                                    aria-label={`${t('admin.correct.delete')} ${t('punch.out')}`}
-                                  >
-                                    ✕
-                                  </button>
-                                </div>
-                              ) : (
-                                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-amber-100 text-amber-800 text-sm font-medium">
-                                  ⚠️ {t('admin.shifts.openShift')}
-                                </span>
-                              )}
-                              {/* row 2: in-location / (gap) / out-location */}
-                              <div className="justify-self-start">
-                                {s.in && <LocationPill p={s.in} offices={offices} t={t} />}
-                              </div>
-                              <span />
-                              <div className="justify-self-start">
-                                {s.out && <LocationPill p={s.out} offices={offices} t={t} />}
-                              </div>
-                            </div>
-                          </li>
-                        );
-                      })}
-                    </ul>
-                  </section>
-                );
-              })}
-              <div className="app-card px-4 py-3 flex items-center justify-between gap-3 flex-wrap text-sm">
-                {paginationContent}
+        const renderShiftRow = (s: Shift, key: string) => (
+          <li key={key} className="px-4 py-3">
+            <div className="grid grid-cols-[auto_auto_auto] gap-x-2 gap-y-1.5 items-start w-fit max-w-full">
+              {s.in ? (
+                <div className="flex items-center gap-1">
+                  <TimeBox p={s.in} onModify={() => setModal({ mode: 'modify', target: targetOf(s.in!) })} />
+                  <button
+                    type="button"
+                    onClick={() => setModal({ mode: 'delete', target: targetOf(s.in!) })}
+                    className="h-7 w-7 inline-flex items-center justify-center rounded-md text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition"
+                    title={`${t('admin.correct.delete')} · ${t('punch.in')}`}
+                    aria-label={`${t('admin.correct.delete')} ${t('punch.in')}`}
+                  >
+                    ✕
+                  </button>
+                </div>
+              ) : (
+                <span className="inline-flex items-center px-3 py-1.5 rounded-md bg-slate-50 ring-1 ring-slate-200 text-slate-400 text-sm">—</span>
+              )}
+              <span className="text-slate-400 self-center px-1">–</span>
+              {s.out ? (
+                <div className="flex items-center gap-1">
+                  <TimeBox p={s.out} onModify={() => setModal({ mode: 'modify', target: targetOf(s.out!) })} />
+                  <button
+                    type="button"
+                    onClick={() => setModal({ mode: 'delete', target: targetOf(s.out!) })}
+                    className="h-7 w-7 inline-flex items-center justify-center rounded-md text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition"
+                    title={`${t('admin.correct.delete')} · ${t('punch.out')}`}
+                    aria-label={`${t('admin.correct.delete')} ${t('punch.out')}`}
+                  >
+                    ✕
+                  </button>
+                </div>
+              ) : (
+                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-amber-100 text-amber-800 text-sm font-medium">
+                  ⚠️ {t('admin.shifts.openShift')}
+                </span>
+              )}
+              <div className="justify-self-start">
+                {s.in && <LocationPill p={s.in} offices={offices} t={t} />}
+              </div>
+              <span />
+              <div className="justify-self-start">
+                {s.out && <LocationPill p={s.out} offices={offices} t={t} />}
               </div>
             </div>
-          );
-        }
+          </li>
+        );
 
         return (
-          <div className="app-card overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="bg-slate-50 text-slate-500">
-                  <tr>
-                    <th className="text-left px-4 py-2.5 font-medium text-xs uppercase tracking-wider">{t('admin.table.time')}</th>
-                    <th className="text-left px-4 py-2.5 font-medium text-xs uppercase tracking-wider">{t('admin.table.person')}</th>
-                    <th className="text-left px-4 py-2.5 font-medium text-xs uppercase tracking-wider">{t('admin.table.status')}</th>
-                    <th className="text-left px-4 py-2.5 font-medium text-xs uppercase tracking-wider">{t('admin.table.info')}</th>
-                    <th className="text-center px-3 py-2.5 font-medium text-xs uppercase tracking-wider w-10">{t('admin.table.warn')}</th>
-                    <th className="text-right px-3 py-2.5 font-medium text-xs uppercase tracking-wider">{t('admin.table.actions')}</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {pagedRows.map(r => {
-                    const lat = r.punch?.latitude;
-                    const lng = r.punch?.longitude;
-                    const hasGps = typeof lat === 'number' && typeof lng === 'number';
-                    const distM = distanceToNearestOffice(lat, lng, offices);
-                    const isFar = distM !== null && distM > FAR_THRESHOLD_M;
-                    const target: CorrectionTarget = {
-                      effective_id: r.id,
-                      employee_name: r.employee.full_name,
-                      kind: r.kind,
-                      effective_time: r.effective_time,
-                    };
+          <div className="space-y-3">
+            {pagedShiftsGrouped.map(({ date, employees: dayEmployees }) => {
+              const dayAnchor = dayEmployees[0].shifts[0].in ?? dayEmployees[0].shifts[0].out!;
+              const dayHm = msToHm(shiftDayTotalsMs.get(date) ?? 0);
+              return (
+                <section key={date} className="app-card overflow-hidden">
+                  <header className="px-4 py-3 border-b border-slate-100 flex items-center justify-between gap-3 bg-slate-50/60">
+                    <div className="text-sm font-semibold text-slate-900">{formatDate(dayAnchor.effective_time)}</div>
+                    <div className="flex items-center gap-1.5 text-sm text-slate-700">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4 text-slate-500" aria-hidden="true">
+                        <circle cx="12" cy="13" r="8" />
+                        <path d="M12 9v4l2 2" />
+                        <path d="M9 2h6" />
+                      </svg>
+                      <span className="font-mono tabular-nums">{t('admin.stats.hours', { h: dayHm.h, m: dayHm.m })}</span>
+                    </div>
+                  </header>
+                  {dayEmployees.map(({ empId, name, shifts: empShifts }, empIdx) => {
+                    const empHm = msToHm(shiftEmpDayTotalsMs.get(`${empId}|${date}`) ?? 0);
                     return (
-                      <tr key={r.id} className="hover:bg-slate-50/50">
-                        <td className="px-4 py-3 whitespace-nowrap font-mono tabular-nums text-slate-900">
-                          {rangeFilter === 'day' ? formatTime(r.effective_time) : formatDateTime(r.effective_time)}
-                          {r.source_request_id && (
-                            <span className="ml-1.5 text-xs font-sans text-emerald-600" title={t('admin.correct.correctedBadge')}>
-                              ✎
-                            </span>
-                          )}
-                        </td>
-                        <td className="px-4 py-3 whitespace-nowrap text-slate-700">{r.employee.full_name}</td>
-                        <td className="px-4 py-3 whitespace-nowrap">
-                          <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium ${r.kind === 'in' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
-                            <span className="leading-none">{r.kind === 'in' ? '▶' : '■'}</span>
-                            {r.kind === 'in' ? t('punch.in') : t('punch.out')}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3 text-xs text-slate-600">
-                          {hasGps ? (
-                            <a
-                              href={`https://www.google.com/maps?q=${lat},${lng}`}
-                              target="_blank" rel="noopener noreferrer"
-                              className="text-emerald-700 hover:underline"
-                            >
-                              📍 {lat.toFixed(5)}, {lng.toFixed(5)}
-                              {typeof r.punch?.accuracy_m === 'number' && ` · ±${Math.round(r.punch.accuracy_m)}m`}
-                              {distM !== null && ` · ${t('admin.distanceFromOffice', { distance: formatDistance(distM) })}`}
-                            </a>
-                          ) : (
-                            <span className="text-slate-400">{t('admin.noGps')}</span>
-                          )}
-                        </td>
-                        <td className="px-3 py-3 text-center">
-                          {isFar && <span title={`${Math.round(distM!)}m`}>⚠️</span>}
-                        </td>
-                        <td className="px-3 py-3 whitespace-nowrap text-right">
-                          <button
-                            type="button"
-                            onClick={() => setModal({ mode: 'modify', target })}
-                            className="text-xs text-emerald-700 hover:underline mr-3"
-                          >
-                            {t('admin.correct.modify')}
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setModal({ mode: 'delete', target })}
-                            className="text-xs text-rose-700 hover:underline"
-                          >
-                            {t('admin.correct.delete')}
-                          </button>
-                        </td>
-                      </tr>
+                      <div key={empId} className={empIdx > 0 ? 'border-t border-slate-200' : ''}>
+                        {!isSingleEmployee && (
+                          <div className="px-4 py-2 flex items-center justify-between gap-3 text-xs bg-slate-50/30">
+                            <span className="font-medium text-slate-700">{name}</span>
+                            <span className="text-slate-500 font-mono tabular-nums">{t('admin.stats.hours', { h: empHm.h, m: empHm.m })}</span>
+                          </div>
+                        )}
+                        <ul className="divide-y divide-slate-100">
+                          {empShifts.map((s, idx) => {
+                            const rowAnchor = s.in ?? s.out!;
+                            return renderShiftRow(s, `${rowAnchor.id}-${idx}`);
+                          })}
+                        </ul>
+                      </div>
                     );
                   })}
-                </tbody>
-              </table>
-            </div>
-            <div className="border-t border-slate-100 px-4 py-3 flex items-center justify-between gap-3 flex-wrap text-sm">
+                </section>
+              );
+            })}
+            <div className="app-card px-4 py-3 flex items-center justify-between gap-3 flex-wrap text-sm">
               {paginationContent}
             </div>
           </div>
