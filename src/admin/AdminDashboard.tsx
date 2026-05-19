@@ -185,6 +185,73 @@ function TimeWarnPill({
   );
 }
 
+// How many warning pills a punch would render (time-abnormal + location).
+function warningCount(p: Row, offices: OfficeCoords[]): number {
+  const timeBad = !isPunchTimeNormal(p.kind, p.effective_time);
+  const lat = p.punch?.latitude;
+  const lng = p.punch?.longitude;
+  const hasGps = typeof lat === 'number' && typeof lng === 'number';
+  const distM = distanceToNearestOffice(lat, lng, offices);
+  const locBad = !hasGps || (distM !== null && distM > FAR_THRESHOLD_M);
+  return (timeBad ? 1 : 0) + (locBad ? 1 : 0);
+}
+
+// Warning pills for one punch. Two or more pills collapse behind a single
+// ⚠️ icon so rows don't get cluttered; clicking the icon expands them.
+function PunchBadges({
+  p,
+  offices,
+  t,
+}: {
+  p: Row;
+  offices: OfficeCoords[];
+  t: (key: string, vars?: Record<string, string | number>) => string;
+}) {
+  const [open, setOpen] = useState(false);
+  const count = warningCount(p, offices);
+  if (count === 0) return null;
+
+  const pills = (
+    <>
+      <TimeWarnPill p={p} t={t} />
+      <LocationPill p={p} offices={offices} t={t} />
+    </>
+  );
+
+  if (count === 1) {
+    return <div className="flex flex-wrap gap-1">{pills}</div>;
+  }
+
+  if (!open) {
+    return (
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-amber-100 text-amber-800 text-xs font-medium hover:bg-amber-200 transition"
+        title={t('admin.warningsExpand')}
+        aria-label={t('admin.warningsExpand')}
+      >
+        ⚠️ {count}
+      </button>
+    );
+  }
+
+  return (
+    <div className="flex flex-wrap items-center gap-1">
+      {pills}
+      <button
+        type="button"
+        onClick={() => setOpen(false)}
+        className="inline-flex h-6 w-6 items-center justify-center rounded-md text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition"
+        title={t('admin.warningsCollapse')}
+        aria-label={t('admin.warningsCollapse')}
+      >
+        ✕
+      </button>
+    </div>
+  );
+}
+
 // Read-only modal describing the punch time + location rules.
 function RulesModal({
   t,
@@ -604,14 +671,12 @@ export function AdminDashboard() {
                     ⚠️ {t('admin.shifts.openShift')}
                   </button>
                 )}
-                <div className="justify-self-start flex flex-wrap gap-1">
-                  {s.in && <TimeWarnPill p={s.in} t={t} />}
-                  {s.in && <LocationPill p={s.in} offices={offices} t={t} />}
+                <div className="justify-self-start">
+                  {s.in && <PunchBadges p={s.in} offices={offices} t={t} />}
                 </div>
                 <span />
-                <div className="justify-self-start flex flex-wrap gap-1">
-                  {s.out && <TimeWarnPill p={s.out} t={t} />}
-                  {s.out && <LocationPill p={s.out} offices={offices} t={t} />}
+                <div className="justify-self-start">
+                  {s.out && <PunchBadges p={s.out} offices={offices} t={t} />}
                 </div>
               </div>
               {rowTargets.length > 0 && (

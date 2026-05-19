@@ -94,6 +94,8 @@ interface Messages {
     distanceFromOffice: string; // uses {distance}
     abnormalTimeIn: string;
     abnormalTimeOut: string;
+    warningsExpand: string;
+    warningsCollapse: string;
     filterAll: string;
     filterLabel: string;
     rangeLabel: string;
@@ -271,6 +273,8 @@ export const MESSAGES: Record<Lang, Messages> = {
       distanceFromOffice: '距离办公点 {distance}',
       abnormalTimeIn: '上班时间不正常',
       abnormalTimeOut: '下班时间不正常',
+      warningsExpand: '查看警告',
+      warningsCollapse: '收起',
       filterAll: '全部员工',
       filterLabel: '员工筛选',
       rangeLabel: '范围',
@@ -451,6 +455,8 @@ export const MESSAGES: Record<Lang, Messages> = {
       distanceFromOffice: '{distance} from office',
       abnormalTimeIn: 'Unusual clock-in time',
       abnormalTimeOut: 'Unusual clock-out time',
+      warningsExpand: 'Show warnings',
+      warningsCollapse: 'Collapse',
       filterAll: 'All employees',
       filterLabel: 'Filter by employee',
       rangeLabel: 'Range',
@@ -631,6 +637,8 @@ export const MESSAGES: Record<Lang, Messages> = {
       distanceFromOffice: '{distance} de la oficina',
       abnormalTimeIn: 'Hora de entrada inusual',
       abnormalTimeOut: 'Hora de salida inusual',
+      warningsExpand: 'Ver avisos',
+      warningsCollapse: 'Contraer',
       filterAll: 'Todos los empleados',
       filterLabel: 'Filtrar por empleado',
       rangeLabel: 'Rango',
