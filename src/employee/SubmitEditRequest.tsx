@@ -21,7 +21,7 @@ export function SubmitEditRequest() {
     try {
       const iso = new Date(datetime).toISOString();
       await submitEditRequest({ requested_kind: kind, requested_time: iso, reason });
-      nav('/', { replace: true });
+      nav('/history', { replace: true });
     } catch (e: unknown) {
       const apiErr = e as ApiError;
       const known = t(`editRequest.errors.${apiErr.code}`, { code: apiErr.code });
@@ -33,7 +33,7 @@ export function SubmitEditRequest() {
 
   return (
     <div className="min-h-full max-w-md mx-auto px-4 py-6 space-y-4">
-      <Link to="/" className="inline-block text-sm text-emerald-700 hover:underline">{t('common.back')}</Link>
+      <Link to="/history" className="inline-block text-sm text-emerald-700 hover:underline">{t('common.back')}</Link>
       <h1 className="text-2xl font-bold text-slate-900">{t('editRequest.title')}</h1>
 
       <form onSubmit={submit} className="app-card p-5 space-y-4">
