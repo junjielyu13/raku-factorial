@@ -11,7 +11,7 @@ import { LogoutButton } from '../components/LogoutButton';
 import { PunchCorrectionModal } from '../components/PunchCorrectionModal';
 import type { CorrectionTarget } from '../components/PunchCorrectionModal';
 import type { EffectivePunch, Employee } from '../lib/types';
-import { OFFICES, type OfficeCoords } from '../lib/office';
+import { OFFICE, OFFICES, type OfficeCoords } from '../lib/office';
 
 type RangeFilter = 'day' | 'last7' | 'last30' | 'custom';
 
@@ -58,7 +58,7 @@ function pairShiftsByEmployee(rows: Row[]): Shift[] {
   return all;
 }
 
-const FAR_THRESHOLD_M = 2000;
+const FAR_THRESHOLD_M = OFFICE.radius_meters;
 
 // Expected punch-time windows (Europe/Madrid, [from, to] minutes since midnight,
 // both ends inclusive). A punch outside every window for its kind is flagged.

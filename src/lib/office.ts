@@ -12,7 +12,7 @@ export const OFFICE = {
   name: 'Oficina Principal',
   latitude: 41.478107,
   longitude: 2.084087,
-  radius_meters: 200,
+  radius_meters: 1000,
 } as const;
 
 export const OFFICES: OfficeCoords[] = [
