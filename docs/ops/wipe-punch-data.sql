@@ -11,7 +11,9 @@
 --
 -- Tables preserved:
 --   - employees, auth.users  (staff can still log in)
---   - office_locations       (geofence config)
+--
+-- Note: office_locations was dropped in migration 20260520000002; office
+-- coords now live in src/lib/office.ts.
 
 BEGIN;
 
@@ -37,7 +39,6 @@ SELECT 'after' AS phase,
 
 -- Sanity-check what we kept
 SELECT 'kept' AS phase,
-       (SELECT count(*) FROM public.employees)        AS employees,
-       (SELECT count(*) FROM public.office_locations) AS office_locations;
+       (SELECT count(*) FROM public.employees) AS employees;
 
 COMMIT;
