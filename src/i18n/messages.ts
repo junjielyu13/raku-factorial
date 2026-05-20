@@ -55,6 +55,9 @@ interface Messages {
     adminLink: string;
     statusOn: string;       // uses {time}
     statusOff: string;
+    backupReminder: string;     // uses {month}
+    backupReminderCta: string;
+    backupReminderDismiss: string;
   };
   history: {
     title: string;
@@ -257,6 +260,9 @@ export const MESSAGES: Record<Lang, Messages> = {
       adminLink: '管理',
       statusOn: '上班中 · 从 {time}',
       statusOff: '未上班',
+      backupReminder: '别忘了备份 {month} 的打卡记录',
+      backupReminderCta: '立刻导出',
+      backupReminderDismiss: '我知道了',
     },
     history: {
       title: '打卡历史',
@@ -469,6 +475,9 @@ export const MESSAGES: Record<Lang, Messages> = {
       adminLink: 'Admin',
       statusOn: 'Clocked in since {time}',
       statusOff: 'Not clocked in',
+      backupReminder: "Don't forget to back up {month}'s punch records",
+      backupReminderCta: 'Export now',
+      backupReminderDismiss: 'Got it',
     },
     history: {
       title: 'History',
@@ -681,6 +690,9 @@ export const MESSAGES: Record<Lang, Messages> = {
       adminLink: 'Administración',
       statusOn: 'Fichado desde las {time}',
       statusOff: 'Sin fichar',
+      backupReminder: 'No olvides exportar los fichajes de {month}',
+      backupReminderCta: 'Exportar ahora',
+      backupReminderDismiss: 'Entendido',
     },
     history: {
       title: 'Historial',

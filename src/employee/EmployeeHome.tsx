@@ -20,6 +20,19 @@ function initials(name: string | undefined): string {
 
 const LOOKBACK_DAYS = 7;
 
+// Returns the previous Madrid month ("YYYY-MM") if today is within the first
+// BACKUP_REMINDER_DAYS of the month; null otherwise.
+const BACKUP_REMINDER_DAYS = 3;
+function backupReminderMonth(todayKey: string): string | null {
+  const [yStr, mStr, dStr] = todayKey.split('-');
+  if (parseInt(dStr, 10) > BACKUP_REMINDER_DAYS) return null;
+  const y = parseInt(yStr, 10);
+  const m = parseInt(mStr, 10);
+  const prevY = m === 1 ? y - 1 : y;
+  const prevM = m === 1 ? 12 : m - 1;
+  return `${prevY}-${String(prevM).padStart(2, '0')}`;
+}
+
 export function EmployeeHome() {
   const { profile } = useAuth();
   const { t } = useTranslation();
@@ -63,6 +76,17 @@ export function EmployeeHome() {
 
   const shifts = useMemo(() => pairShifts(rows), [rows]);
 
+  const reminderMonth = profile?.role === 'admin' ? backupReminderMonth(todayKey) : null;
+  const reminderKey = reminderMonth ? `backupReminder.dismissed.${reminderMonth}` : null;
+  const [reminderDismissed, setReminderDismissed] = useState<boolean>(
+    () => reminderKey ? localStorage.getItem(reminderKey) === '1' : false,
+  );
+  const dismissReminder = () => {
+    if (reminderKey) localStorage.setItem(reminderKey, '1');
+    setReminderDismissed(true);
+  };
+  const showReminder = reminderMonth !== null && !reminderDismissed;
+
   // Group shifts by Madrid day (already newest-first from pairShifts).
   const grouped = useMemo(() => {
     const m = new Map<string, ShiftPair<EffectivePunch>[]>();
@@ -105,6 +129,32 @@ export function EmployeeHome() {
           <LogoutButton />
         </div>
       </header>
+
+      {showReminder && reminderMonth && (
+        <section className="app-card p-4 bg-amber-50 ring-amber-200 ring-1 border-0 space-y-3">
+          <div className="flex items-start gap-2">
+            <span className="text-xl leading-none" aria-hidden="true">⏰</span>
+            <p className="text-sm text-amber-900 flex-1">
+              {t('home.backupReminder', { month: reminderMonth })}
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <Link
+              to={`/admin/export?month=${reminderMonth}`}
+              className="inline-flex items-center px-3 py-1.5 rounded-md text-sm font-medium bg-amber-600 text-white hover:bg-amber-700"
+            >
+              {t('home.backupReminderCta')}
+            </Link>
+            <button
+              type="button"
+              onClick={dismissReminder}
+              className="inline-flex items-center px-3 py-1.5 rounded-md text-sm text-amber-800 hover:bg-amber-100"
+            >
+              {t('home.backupReminderDismiss')}
+            </button>
+          </div>
+        </section>
+      )}
 
       <section className="app-card p-5 space-y-4">
         <div className="flex items-center gap-2">

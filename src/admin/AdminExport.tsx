@@ -1,6 +1,6 @@
 // src/admin/AdminExport.tsx
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { exportMonthCsv } from '../lib/api';
 import type { ApiError } from '../lib/api';
 import { currentMonthKey } from '../lib/time';
@@ -8,7 +8,12 @@ import { useTranslation } from '../i18n/LanguageContext';
 
 export function AdminExport() {
   const { t } = useTranslation();
-  const [month, setMonth] = useState(currentMonthKey());
+  const [params] = useSearchParams();
+  const initialMonth = (() => {
+    const q = params.get('month');
+    return q && /^\d{4}-\d{2}$/.test(q) ? q : currentMonthKey();
+  })();
+  const [month, setMonth] = useState(initialMonth);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
