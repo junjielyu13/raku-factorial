@@ -11,6 +11,7 @@ import { LogoutButton } from '../components/LogoutButton';
 import { PunchCorrectionModal } from '../components/PunchCorrectionModal';
 import type { CorrectionTarget } from '../components/PunchCorrectionModal';
 import type { EffectivePunch, Employee } from '../lib/types';
+import { OFFICES, type OfficeCoords } from '../lib/office';
 
 type RangeFilter = 'day' | 'last7' | 'last30' | 'custom';
 
@@ -26,7 +27,6 @@ interface Row extends EffectivePunch {
   punch: { latitude: number | null; longitude: number | null; accuracy_m: number | null } | null;
 }
 
-interface OfficeCoords { latitude: number; longitude: number }
 interface EmployeeOption { id: string; full_name: string }
 
 type ModalState =
@@ -286,7 +286,7 @@ function RulesModal({
 export function AdminDashboard() {
   const { t } = useTranslation();
   const [rows, setRows] = useState<Row[]>([]);
-  const [offices, setOffices] = useState<OfficeCoords[]>([]);
+  const offices = OFFICES;
   const [employees, setEmployees] = useState<EmployeeOption[]>([]);
   const [filterEmployeeId, setFilterEmployeeId] = useState<string>('all');
   const [rangeFilter, setRangeFilter] = useState<RangeFilter>('last7');
@@ -305,12 +305,6 @@ export function AdminDashboard() {
   }, [rangeFilter, selectedDate, customStart, customEnd, filterEmployeeId, pageSize]);
 
   useEffect(() => {
-    supabase.from('office_locations').select('latitude, longitude').eq('active', true)
-      .then(({ data }) => {
-        setOffices(((data ?? []) as { latitude: number; longitude: number }[])
-          .map(o => ({ latitude: Number(o.latitude), longitude: Number(o.longitude) })));
-      });
-
     supabase.from('employees').select('id, full_name').eq('active', true).order('full_name')
       .then(({ data }) => setEmployees((data as EmployeeOption[]) ?? []));
   }, []);

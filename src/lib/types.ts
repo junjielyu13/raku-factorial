@@ -15,7 +15,6 @@ export interface Punch {
   latitude: number;
   longitude: number;
   accuracy_m: number | null;
-  office_id: string;
 }
 
 export interface EffectivePunch {

@@ -33,18 +33,17 @@ Deno.test({ name: "export-month: admin → CSV with header and rows", sanitizeRe
     await cleanup();
     const emp  = await makeUser('emp@test.local', 'employee');
     const boss = await makeUser('boss@test.local', 'admin');
-    const office = (await admin.from('office_locations').select('id').limit(1).single()).data!.id;
 
     // 1 paired punch
     const t0 = new Date('2026-05-05T09:00:00Z');
     const t1 = new Date('2026-05-05T17:00:00Z');
     const { data: p1 } = await admin.from('punches').insert({
       employee_id: emp.id, kind: 'in', recorded_at: t0.toISOString(),
-      latitude: 40.4, longitude: -3.7, office_id: office,
+      latitude: 40.4, longitude: -3.7,
     }).select('id').single();
     const { data: p2 } = await admin.from('punches').insert({
       employee_id: emp.id, kind: 'out', recorded_at: t1.toISOString(),
-      latitude: 40.4, longitude: -3.7, office_id: office,
+      latitude: 40.4, longitude: -3.7,
     }).select('id').single();
     await admin.from('effective_punches').insert([
       { employee_id: emp.id, kind: 'in',  effective_time: t0.toISOString(), source_punch_id: p1!.id },
@@ -70,17 +69,16 @@ Deno.test({ name: "export-month: employee → only sees own rows", sanitizeResou
     await cleanup();
     const alice = await makeUser('alice@test.local', 'employee');
     const bob   = await makeUser('bob@test.local',   'employee');
-    const office = (await admin.from('office_locations').select('id').limit(1).single()).data!.id;
     const t0 = new Date('2026-05-05T09:00:00Z');
     const t1 = new Date('2026-05-05T17:00:00Z');
     for (const emp of [alice, bob]) {
       const { data: pi } = await admin.from('punches').insert({
         employee_id: emp.id, kind: 'in', recorded_at: t0.toISOString(),
-        latitude: 40.4, longitude: -3.7, office_id: office,
+        latitude: 40.4, longitude: -3.7,
       }).select('id').single();
       const { data: po } = await admin.from('punches').insert({
         employee_id: emp.id, kind: 'out', recorded_at: t1.toISOString(),
-        latitude: 40.4, longitude: -3.7, office_id: office,
+        latitude: 40.4, longitude: -3.7,
       }).select('id').single();
       await admin.from('effective_punches').insert([
         { employee_id: emp.id, kind: 'in',  effective_time: t0.toISOString(), source_punch_id: pi!.id },
@@ -102,16 +100,15 @@ Deno.test({ name: "export-month: totals section shows monthly_hours per employee
     await cleanup();
     const emp  = await makeUser('totals@test.local', 'employee');
     const boss = await makeUser('boss-totals@test.local', 'admin');
-    const office = (await admin.from('office_locations').select('id').limit(1).single()).data!.id;
     const t0 = new Date('2026-05-05T09:00:00Z');
     const t1 = new Date('2026-05-05T17:00:00Z');
     const { data: pi } = await admin.from('punches').insert({
       employee_id: emp.id, kind: 'in', recorded_at: t0.toISOString(),
-      latitude: 40.4, longitude: -3.7, office_id: office,
+      latitude: 40.4, longitude: -3.7,
     }).select('id').single();
     const { data: po } = await admin.from('punches').insert({
       employee_id: emp.id, kind: 'out', recorded_at: t1.toISOString(),
-      latitude: 40.4, longitude: -3.7, office_id: office,
+      latitude: 40.4, longitude: -3.7,
     }).select('id').single();
     await admin.from('effective_punches').insert([
       { employee_id: emp.id, kind: 'in',  effective_time: t0.toISOString(), source_punch_id: pi!.id },

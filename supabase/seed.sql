@@ -1,10 +1,7 @@
 -- supabase/seed.sql
 -- Reset and seed local dev data. Run via `supabase db reset`.
 
--- Office location (Barcelona area)
-INSERT INTO public.office_locations (id, name, latitude, longitude, radius_meters)
-VALUES
-  ('00000000-0000-0000-0000-000000000001', 'Oficina Principal', 41.478107, 2.084087, 200);
+-- Office location is now hardcoded in src/lib/office.ts.
 
 -- A demo admin user. Real production setup creates this via Studio + magic link.
 -- For local dev, supabase creates auth.users via auth.admin API on first login.

@@ -41,7 +41,6 @@ Deno.serve(async (req) => {
       p_lat:         body.latitude,
       p_lng:         body.longitude,
       p_accuracy:    acc,
-      p_office_id:   null,
       p_user_agent:  userAgent,
       p_ip:          ip,
     });
