@@ -158,7 +158,7 @@ export function EmployeeHistory() {
   const [rows, setRows] = useState<EffectivePunch[]>([]);
   const [pending, setPending] = useState<PendingReq[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState<Filter>('last30');
+  const [filter, setFilter] = useState<Filter>('last7');
   const [selectedDate, setSelectedDate] = useState<string>(madridTodayKey());
   const [pageSize, setPageSize] = useState<PageSize>(10);
   const [page, setPage] = useState(0);
