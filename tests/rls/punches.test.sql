@@ -7,15 +7,12 @@ DO $$
 DECLARE
   alice  uuid := test_make_user('alice@test.local', 'employee');
   bob    uuid := test_make_user('bob@test.local',   'employee');
-  office uuid;
   n int;
 BEGIN
-  SELECT id INTO office FROM public.office_locations LIMIT 1;
-
   -- Insert a punch for Bob using service_role-like bypass
   PERFORM set_config('role', 'postgres', true);
-  INSERT INTO public.punches (employee_id, kind, latitude, longitude, office_id)
-  VALUES (bob, 'in', 40.416775, -3.703790, office);
+  INSERT INTO public.punches (employee_id, kind, latitude, longitude)
+  VALUES (bob, 'in', 40.416775, -3.703790);
 
   -- Switch to Alice and count Bob's punches
   PERFORM test_set_user(alice);
@@ -30,8 +27,8 @@ BEGIN
   -- As Bob, attempting direct INSERT must fail
   PERFORM test_set_user(bob);
   BEGIN
-    INSERT INTO public.punches (employee_id, kind, latitude, longitude, office_id)
-    VALUES (bob, 'in', 40.416775, -3.703790, office);
+    INSERT INTO public.punches (employee_id, kind, latitude, longitude)
+    VALUES (bob, 'in', 40.416775, -3.703790);
     ASSERT false, 'Bob was able to insert directly; RLS broken';
   EXCEPTION WHEN insufficient_privilege OR check_violation THEN
     NULL; -- expected
