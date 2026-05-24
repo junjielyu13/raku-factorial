@@ -6,7 +6,7 @@ import { useAuth } from '../auth/useAuth';
 import { PunchButton } from '../components/PunchButton';
 import { LanguagePicker } from '../components/LanguagePicker';
 import { LogoutButton } from '../components/LogoutButton';
-import { formatTime, formatDate, madridDayKeyOf, madridTodayKey } from '../lib/time';
+import { formatTime, formatDate, formatDateTime, madridDayKeyOf, madridTodayKey } from '../lib/time';
 import { pairShifts, msToHm } from '../lib/worked';
 import type { ShiftPair } from '../lib/worked';
 import { useTranslation } from '../i18n/LanguageContext';
@@ -57,13 +57,12 @@ export function EmployeeHome() {
   useEffect(() => { load(); }, [load]);
 
   const todayKey = madridTodayKey();
-  const todayPunches = useMemo(
-    () => rows.filter(r => madridDayKeyOf(r.effective_time) === todayKey),
-    [rows, todayKey],
-  );
-  const lastTodayPunch = todayPunches[todayPunches.length - 1];
-  const isOn = lastTodayPunch?.kind === 'in';
+  // Use the last punch across all loaded rows — an open shift from a previous
+  // day still means the user is clocked in, even if there's no punch today.
+  const lastPunch = rows[rows.length - 1];
+  const isOn = lastPunch?.kind === 'in';
   const nextKind: 'in' | 'out' = isOn ? 'out' : 'in';
+  const lastPunchIsToday = lastPunch && madridDayKeyOf(lastPunch.effective_time) === todayKey;
 
   // Re-tick once a minute while clocked in so today's running total stays fresh.
   const [tickNow, setTickNow] = useState(() => Date.now());
@@ -160,7 +159,13 @@ export function EmployeeHome() {
         <div className="flex items-center gap-2">
           <span className={`inline-block h-2.5 w-2.5 rounded-full ${isOn ? 'bg-emerald-500 animate-pulse' : 'bg-slate-300'}`} />
           <span className={`text-sm font-medium ${isOn ? 'text-emerald-700' : 'text-slate-500'}`}>
-            {isOn ? t('home.statusOn', { time: formatTime(lastTodayPunch.effective_time) }) : t('home.statusOff')}
+            {isOn
+              ? t('home.statusOn', {
+                  time: lastPunchIsToday
+                    ? formatTime(lastPunch.effective_time)
+                    : formatDateTime(lastPunch.effective_time),
+                })
+              : t('home.statusOff')}
           </span>
         </div>
         <PunchButton kind={nextKind} onSuccess={load} />
