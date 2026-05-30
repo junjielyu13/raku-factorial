@@ -4,6 +4,7 @@ import type { FormEvent } from 'react';
 import { submitEditRequest } from '../lib/api';
 import type { ApiError } from '../lib/api';
 import { useTranslation } from '../i18n/LanguageContext';
+import { MESSAGES } from '../i18n/messages';
 import { formatDateTime } from '../lib/time';
 
 export interface EditTarget {
@@ -43,7 +44,8 @@ function toLocalInput(iso: string): string {
 }
 
 export function EditRequestModal(props: Props) {
-  const { t } = useTranslation();
+  const { t, lang } = useTranslation();
+  const commonReasons = MESSAGES[lang].editRequest.commonReasons;
   const initialIso = props.mode === 'modify' ? props.target.effective_time : '';
   const [datetime, setDatetime] = useState(initialIso ? toLocalInput(initialIso) : '');
   const [reason, setReason] = useState('');
@@ -137,8 +139,25 @@ export function EditRequestModal(props: Props) {
             </label>
           )}
 
-          <label className="block space-y-1.5">
+          <div className="space-y-1.5">
             <span className="text-sm font-medium text-slate-700">{t('editRequest.reason')}</span>
+            <div className="flex flex-wrap gap-2">
+              <span className="w-full text-xs text-slate-500">{t('editRequest.commonReasonsHint')}</span>
+              {commonReasons.map(r => (
+                <button
+                  type="button"
+                  key={r}
+                  onClick={() => setReason(r)}
+                  className={`rounded-full px-3 py-1 text-sm ring-1 transition ${
+                    reason === r
+                      ? 'bg-emerald-600 text-white ring-emerald-600'
+                      : 'bg-white text-slate-700 ring-slate-300 hover:bg-slate-50'
+                  }`}
+                >
+                  {r}
+                </button>
+              ))}
+            </div>
             <textarea
               required
               value={reason}
@@ -146,7 +165,7 @@ export function EditRequestModal(props: Props) {
               rows={3}
               className="app-input resize-none"
             />
-          </label>
+          </div>
 
           <p className="text-xs text-slate-500">{t('editRequest.pendingHint')}</p>
 
