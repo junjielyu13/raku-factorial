@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
-import { formatTime, formatDate, formatWeekday, madridDayRange, madridDayKeyOf, madridTodayKey, madridMinutesOfDay, madridWeekStartKey, madridWeekRange, addDaysKey } from '../lib/time';
+import { formatTime, formatDate, formatWeekday, madridDayRange, madridDayKeyOf, madridTodayKey, madridMinutesOfDay, madridWeekStartKey, madridWeekRange, addDaysKey, madridLastNDaysStart } from '../lib/time';
 import { workedMsForDay, msToHm, pairShifts } from '../lib/worked';
 import type { ShiftPair } from '../lib/worked';
 import { useTranslation } from '../i18n/LanguageContext';
@@ -352,8 +352,7 @@ export function AdminDashboard() {
       q = q.gte('effective_time', start).lt('effective_time', end);
     } else {
       const days = rangeFilter === 'last7' ? 7 : 30;
-      const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
-      q = q.gte('effective_time', since);
+      q = q.gte('effective_time', madridLastNDaysStart(days));
     }
 
     const { data } = await q.order('effective_time', { ascending: false });

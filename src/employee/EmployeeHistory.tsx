@@ -3,7 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../auth/useAuth';
-import { formatDate, formatWeekday, formatTime, madridDayKeyOf, madridDayRange, madridTodayKey, madridWeekStartKey, madridWeekRange, addDaysKey } from '../lib/time';
+import { formatDate, formatWeekday, formatTime, madridDayKeyOf, madridDayRange, madridTodayKey, madridWeekStartKey, madridWeekRange, addDaysKey, madridLastNDaysStart } from '../lib/time';
 import { pairShifts, msToHm } from '../lib/worked';
 import type { ShiftPair } from '../lib/worked';
 import { useTranslation } from '../i18n/LanguageContext';
@@ -185,8 +185,7 @@ export function EmployeeHistory() {
       q = q.gte('effective_time', start).lt('effective_time', end);
     } else {
       const days = filter === 'last7' ? 7 : 30;
-      const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
-      q = q.gte('effective_time', since);
+      q = q.gte('effective_time', madridLastNDaysStart(days));
     }
 
     q.order('effective_time', { ascending: true })

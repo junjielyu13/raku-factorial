@@ -87,6 +87,17 @@ export function madridDayRange(dateKey: string): { start: string; end: string } 
   return { start: start.toISOString(), end: end.toISOString() };
 }
 
+/**
+ * ISO instant for the start (Madrid midnight) of the window covering the last
+ * `days` CALENDAR days including today. Snapping to a day boundary (rather than
+ * a rolling `now - days*24h`) avoids splitting a shift whose clock-in falls
+ * earlier in the day than the current wall-clock time `days` days ago.
+ */
+export function madridLastNDaysStart(days: number): string {
+  const startKey = addDaysKey(madridTodayKey(), -(days - 1));
+  return madridDayRange(startKey).start;
+}
+
 /** Add n days to a YYYY-MM-DD key (UTC-noon arithmetic, calendar-safe). */
 export function addDaysKey(dateKey: string, n: number): string {
   const [y, m, d] = dateKey.split('-').map(Number);
