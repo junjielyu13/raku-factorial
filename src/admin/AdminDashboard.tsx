@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
-import { formatTime, formatDate, formatWeekday, madridDayRange, madridDayKeyOf, madridTodayKey, madridMinutesOfDay } from '../lib/time';
+import { formatTime, formatDate, formatWeekday, madridDayRange, madridDayKeyOf, madridTodayKey, madridMinutesOfDay, madridWeekStartKey, madridWeekRange, addDaysKey } from '../lib/time';
 import { workedMsForDay, msToHm, pairShifts } from '../lib/worked';
 import type { ShiftPair } from '../lib/worked';
 import { useTranslation } from '../i18n/LanguageContext';
@@ -13,7 +13,7 @@ import type { CorrectionTarget } from '../components/PunchCorrectionModal';
 import type { EffectivePunch, Employee } from '../lib/types';
 import { OFFICE, OFFICES, type OfficeCoords } from '../lib/office';
 
-type RangeFilter = 'day' | 'last7' | 'last30' | 'custom';
+type RangeFilter = 'day' | 'last7' | 'last30' | 'week' | 'custom';
 
 function daysAgoKey(days: number): string {
   return madridDayKeyOf(new Date(Date.now() - days * 24 * 60 * 60 * 1000));
@@ -291,6 +291,7 @@ export function AdminDashboard() {
   const [filterEmployeeId, setFilterEmployeeId] = useState<string>('all');
   const [rangeFilter, setRangeFilter] = useState<RangeFilter>('last7');
   const [selectedDate, setSelectedDate] = useState<string>(madridTodayKey());
+  const [selectedWeekStart, setSelectedWeekStart] = useState<string>(() => madridWeekStartKey(madridTodayKey()));
   const [customStart, setCustomStart] = useState<string>(() => daysAgoKey(7));
   const [customEnd, setCustomEnd] = useState<string>(madridTodayKey());
   const [pageSize, setPageSize] = useState<PageSize>(10);
@@ -302,7 +303,7 @@ export function AdminDashboard() {
   // Reset to first page when filter inputs or page size change.
   useEffect(() => {
     setPage(0);
-  }, [rangeFilter, selectedDate, customStart, customEnd, filterEmployeeId, pageSize]);
+  }, [rangeFilter, selectedDate, selectedWeekStart, customStart, customEnd, filterEmployeeId, pageSize]);
 
   useEffect(() => {
     supabase.from('employees').select('id, full_name').eq('active', true).order('full_name')
@@ -341,6 +342,9 @@ export function AdminDashboard() {
     if (rangeFilter === 'day') {
       const { start, end } = madridDayRange(selectedDate);
       q = q.gte('effective_time', start).lt('effective_time', end);
+    } else if (rangeFilter === 'week') {
+      const { start, end } = madridWeekRange(selectedWeekStart);
+      q = q.gte('effective_time', start).lt('effective_time', end);
     } else if (rangeFilter === 'custom') {
       if (customStart > customEnd) { setRows([]); return; }
       const { start } = madridDayRange(customStart);
@@ -354,17 +358,17 @@ export function AdminDashboard() {
 
     const { data } = await q.order('effective_time', { ascending: false });
     setRows((data as unknown as Row[]) ?? []);
-  }, [rangeFilter, selectedDate, customStart, customEnd]);
+  }, [rangeFilter, selectedDate, selectedWeekStart, customStart, customEnd]);
 
   useEffect(() => {
     fetchPunches();
-    const ch = supabase.channel(`punches-admin-${rangeFilter}-${selectedDate}-${customStart}-${customEnd}`)
+    const ch = supabase.channel(`punches-admin-${rangeFilter}-${selectedDate}-${selectedWeekStart}-${customStart}-${customEnd}`)
       .on('postgres_changes',
           { event: 'INSERT', schema: 'public', table: 'effective_punches' },
           () => fetchPunches())
       .subscribe();
     return () => { supabase.removeChannel(ch); };
-  }, [rangeFilter, selectedDate, customStart, customEnd, fetchPunches]);
+  }, [rangeFilter, selectedDate, selectedWeekStart, customStart, customEnd, fetchPunches]);
 
   const visibleRows = filterEmployeeId === 'all'
     ? rows
@@ -456,6 +460,11 @@ export function AdminDashboard() {
     return { perEmployee, grand: msToHm(grandMs) };
   }, [visibleRows]);
 
+  // Week-picker derived values (cheap; computed each render).
+  const currentWeekStart = madridWeekStartKey(todayKey);
+  const weekRange = madridWeekRange(selectedWeekStart);
+  const weekLabel = `${formatDate(`${weekRange.startKey}T12:00:00Z`)} – ${formatDate(`${weekRange.endKey}T12:00:00Z`)}`;
+
   return (
     <div className="min-h-full max-w-4xl mx-auto px-4 py-6 space-y-5">
       <header className="space-y-4">
@@ -465,9 +474,11 @@ export function AdminDashboard() {
             <div className="text-sm text-slate-500">
               {rangeFilter === 'day'
                 ? formatDate(new Date(`${selectedDate}T12:00:00Z`).toISOString())
-                : rangeFilter === 'custom'
-                  ? `${formatDate(new Date(`${customStart}T12:00:00Z`).toISOString())} – ${formatDate(new Date(`${customEnd}T12:00:00Z`).toISOString())}`
-                  : t(`admin.range.${rangeFilter}`)}
+                : rangeFilter === 'week'
+                  ? weekLabel
+                  : rangeFilter === 'custom'
+                    ? `${formatDate(new Date(`${customStart}T12:00:00Z`).toISOString())} – ${formatDate(new Date(`${customEnd}T12:00:00Z`).toISOString())}`
+                    : t(`admin.range.${rangeFilter}`)}
             </div>
           </div>
           <div className="flex items-center gap-2 shrink-0">
@@ -511,6 +522,7 @@ export function AdminDashboard() {
             <option value="day">{t('admin.range.day')}</option>
             <option value="last7">{t('admin.range.last7')}</option>
             <option value="last30">{t('admin.range.last30')}</option>
+            <option value="week">{t('admin.range.week')}</option>
             <option value="custom">{t('admin.range.custom')}</option>
           </select>
         </label>
@@ -529,6 +541,30 @@ export function AdminDashboard() {
               className="px-3 py-1.5 rounded-lg bg-white ring-1 ring-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
             />
           </label>
+        )}
+        {rangeFilter === 'week' && (
+          <div className="flex items-center gap-1 rounded-lg bg-white ring-1 ring-slate-300 px-1 py-0.5">
+            <button
+              type="button"
+              onClick={() => setSelectedWeekStart(w => addDaysKey(w, -7))}
+              className="h-8 w-8 inline-flex items-center justify-center rounded-md text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition"
+              title={t('history.weekPrev')}
+              aria-label={t('history.weekPrev')}
+            >
+              ‹
+            </button>
+            <span className="px-2 text-sm font-medium text-slate-800 tabular-nums whitespace-nowrap">{weekLabel}</span>
+            <button
+              type="button"
+              onClick={() => setSelectedWeekStart(w => addDaysKey(w, 7))}
+              disabled={selectedWeekStart >= currentWeekStart}
+              className="h-8 w-8 inline-flex items-center justify-center rounded-md text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition disabled:opacity-30 disabled:cursor-not-allowed"
+              title={t('history.weekNext')}
+              aria-label={t('history.weekNext')}
+            >
+              ›
+            </button>
+          </div>
         )}
         {rangeFilter === 'custom' && (
           <>
