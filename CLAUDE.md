@@ -38,7 +38,7 @@ A clock-in/clock-out web app for a 5-person company in Spain. Compliant with **R
 
 ## Supabase gotchas
 
-- **`db.<ref>.supabase.co` only resolves over IPv6.** Direct `psql` from this Mac fails. Use **Supavisor pooler** `aws-0-eu-central-1.pooler.supabase.com:6543` (user `postgres.<project_ref>`), or paste SQL into Studio SQL editor.
+- **`db.<ref>.supabase.co` only resolves over IPv6.** Direct `psql` from this Mac fails. Use **Supavisor pooler** `aws-1-eu-central-1.pooler.supabase.com:6543` (user `postgres.<project_ref>`), or paste SQL into Studio SQL editor.
 - **`psql` is not on PATH** by default. User installed via `brew install libpq` (keg-only). Full path: `/opt/homebrew/opt/libpq/bin/psql`.
 - **Two key formats coexist.** CLI v2.x emits both:
   - Legacy JWT (`ANON_KEY`, `SERVICE_ROLE_KEY`) — used in `supabase/functions/*/test.ts` and Deno tests
@@ -73,7 +73,7 @@ supabase functions deploy <name>
 supabase db push            # apply pending migrations to linked cloud project
 
 # psql to cloud via pooler
-/opt/homebrew/opt/libpq/bin/psql "postgresql://postgres.gdacfthuunkcilcwwopb:<pw>@aws-0-eu-central-1.pooler.supabase.com:6543/postgres"
+/opt/homebrew/opt/libpq/bin/psql "postgresql://postgres.gdacfthuunkcilcwwopb:<pw>@aws-1-eu-central-1.pooler.supabase.com:6543/postgres"
 ```
 
 ## File map
