@@ -22,14 +22,30 @@ type RangeFilter = 'day' | 'last7' | 'last30' | 'week' | 'custom';
 const WEEKLY_TARGET_HOURS = 41;
 const WEEKLY_TARGET_MS = WEEKLY_TARGET_HOURS * 60 * 60 * 1000;
 
-// Renders " / 41 小时" after a worked time, with a 📈 when over the weekly target.
-function WeeklyTargetSuffix({ ms, t }: { ms: number; t: (key: string, vars?: Record<string, string | number>) => string }) {
+// Renders a worked-time value; in week mode the time itself is colored green
+// (within) / red (over) the 41h target, followed by a neutral " / 41 小时"
+// suffix (with 📈 when over). Outside week mode it's the plain neutral value.
+function WeeklyHoursValue({
+  ms,
+  label,
+  showTarget,
+  t,
+}: {
+  ms: number;
+  label: string;
+  showTarget: boolean;
+  t: (key: string, vars?: Record<string, string | number>) => string;
+}) {
+  if (!showTarget) return <span className="text-slate-900">{label}</span>;
   const over = ms > WEEKLY_TARGET_MS;
   return (
-    <span className={`ml-1 font-medium ${over ? 'text-rose-600' : 'text-emerald-600'}`}>
-      {' '}{t('admin.stats.targetSuffix', { h: WEEKLY_TARGET_HOURS })}
-      {over && <span title={t('admin.stats.overTarget')}> 📈</span>}
-    </span>
+    <>
+      <span className={over ? 'text-rose-600' : 'text-emerald-600'}>{label}</span>
+      <span className="ml-1 font-normal text-slate-400">
+        {' '}{t('admin.stats.targetSuffix', { h: WEEKLY_TARGET_HOURS })}
+        {over && <span title={t('admin.stats.overTarget')}> 📈</span>}
+      </span>
+    </>
   );
 }
 
@@ -718,13 +734,15 @@ export function AdminDashboard() {
         <div className="app-card p-4 space-y-3">
           <div className="flex items-baseline justify-between gap-3">
             <h2 className="text-xs font-semibold uppercase tracking-wider text-slate-500">{t('admin.stats.title')}</h2>
-            <span className="text-sm font-semibold text-slate-900 tabular-nums">
-              {t('admin.stats.total', { h: stats.grand.h, m: stats.grand.m })}
-              {/* The grand total only maps to a single 41h target when one
-                  employee is filtered; otherwise it sums several people. */}
-              {rangeFilter === 'week' && filterEmployeeId !== 'all' && (
-                <WeeklyTargetSuffix ms={stats.grandMs} t={t} />
-              )}
+            {/* The grand total only maps to a single 41h target when one
+                employee is filtered; otherwise it sums several people. */}
+            <span className="text-sm font-semibold tabular-nums">
+              <WeeklyHoursValue
+                ms={stats.grandMs}
+                label={t('admin.stats.total', { h: stats.grand.h, m: stats.grand.m })}
+                showTarget={rangeFilter === 'week' && filterEmployeeId !== 'all'}
+                t={t}
+              />
             </span>
           </div>
           <ul className="divide-y divide-slate-100">
@@ -733,9 +751,13 @@ export function AdminDashboard() {
               return (
                 <li key={s.id} className="flex items-center justify-between py-2">
                   <span className="text-sm text-slate-700">{s.name}</span>
-                  <span className="text-sm font-mono tabular-nums text-slate-900">
-                    {t('admin.stats.hours', { h: hm.h, m: hm.m })}
-                    {rangeFilter === 'week' && <WeeklyTargetSuffix ms={s.ms} t={t} />}
+                  <span className="text-sm font-mono tabular-nums">
+                    <WeeklyHoursValue
+                      ms={s.ms}
+                      label={t('admin.stats.hours', { h: hm.h, m: hm.m })}
+                      showTarget={rangeFilter === 'week'}
+                      t={t}
+                    />
                   </span>
                 </li>
               );
