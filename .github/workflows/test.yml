@@ -36,11 +36,16 @@ jobs:
         run: |
           export SUPABASE_SERVICE_ROLE_KEY=$(supabase status -o json | jq -r .SERVICE_ROLE_KEY)
           export SUPABASE_ANON_KEY=$(supabase status -o json | jq -r .ANON_KEY)
-          deno test --allow-all supabase/functions/_shared/haversine.test.ts
+          # --node-modules-dir=none: a root package.json + deno.lock put Deno in
+          # byonm mode, which demands an installed node_modules/ to resolve the
+          # @types/node ref pulled in transitively by supabase-js -> realtime-js
+          # -> ws. CI never runs npm/deno install, so resolve npm types from the
+          # global cache instead of failing the type-check.
+          deno test --allow-all --node-modules-dir=none supabase/functions/_shared/haversine.test.ts
           for d in supabase/functions/*/; do
             name=$(basename "$d")
             if [ "$name" = "_shared" ]; then continue; fi
             if [ -f "${d}test.ts" ]; then
-              deno test --allow-all "${d}test.ts"
+              deno test --allow-all --node-modules-dir=none "${d}test.ts"
             fi
           done
