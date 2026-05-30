@@ -46,8 +46,16 @@ function interpolate(s: string, vars?: Record<string, string | number>): string 
 export function LanguageProvider({ children }: { children: ReactNode }) {
   const [lang, setLangState] = useState<Lang>(detectInitialLang);
 
+  // Set the formatter locale DURING render, not in an effect. The provider
+  // renders before its descendants, so this guarantees formatDate/formatWeekday
+  // read the new locale on the same render that `lang` changes. Doing it in a
+  // useEffect runs after commit (children already rendered with the stale
+  // locale) and mutating the module global triggers no re-render — so weekday
+  // labels stayed in the previous language until an unrelated re-render.
+  // The assignment is idempotent and derived purely from state, so it's safe.
+  setLocale(LOCALE[lang]);
+
   useEffect(() => {
-    setLocale(LOCALE[lang]);
     document.documentElement.lang = LOCALE[lang];
   }, [lang]);
 
