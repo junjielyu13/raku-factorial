@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { formatTime, formatDate, formatWeekday, madridDayRange, madridDayKeyOf, madridTodayKey, madridMinutesOfDay, madridWeekStartKey, madridWeekRange, addDaysKey, madridLastNDaysStart } from '../lib/time';
 import { workedMsForDay, msToHm, pairShifts } from '../lib/worked';
-import { missingEmployees } from '../lib/absence';
+import { attendanceProblems } from '../lib/absence';
 import type { ShiftPair } from '../lib/worked';
 import { useTranslation } from '../i18n/LanguageContext';
 import { LanguagePicker } from '../components/LanguagePicker';
@@ -93,6 +93,16 @@ function pairShiftsByEmployee(rows: Row[]): Shift[] {
 }
 
 const FAR_THRESHOLD_M = OFFICE.radius_meters;
+
+// A single shift (in→out) longer than this is flagged as an abnormal duration —
+// usually a forgotten punch stretching one shift across many hours.
+const LONG_SHIFT_HOURS = 6;
+const LONG_SHIFT_MS = LONG_SHIFT_HOURS * 60 * 60 * 1000;
+
+function isLongShift(s: Shift): boolean {
+  if (!s.in || !s.out) return false;
+  return new Date(s.out.effective_time).getTime() - new Date(s.in.effective_time).getTime() > LONG_SHIFT_MS;
+}
 
 // Expected punch-time windows (Europe/Madrid, [from, to] minutes since midnight,
 // both ends inclusive). A punch outside every window for its kind is flagged.
@@ -186,6 +196,8 @@ function LocationPill({
   const lng = p.punch?.longitude;
   const hasGps = typeof lat === 'number' && typeof lng === 'number';
   if (!hasGps) {
+    // Admin-corrected punches have no GPS by design — don't flag it as missing.
+    if (p.source_request_id) return null;
     return <span className="inline-flex items-center px-2 py-1 rounded-md bg-slate-100 text-xs text-slate-500">{t('admin.noGps')}</span>;
   }
   const distM = distanceToNearestOffice(lat, lng, offices);
@@ -227,7 +239,8 @@ function punchWarnings(p: Row, offices: OfficeCoords[]): { timeBad: boolean; loc
   const lng = p.punch?.longitude;
   const hasGps = typeof lat === 'number' && typeof lng === 'number';
   const distM = distanceToNearestOffice(lat, lng, offices);
-  const locBad = !hasGps || (distM !== null && distM > FAR_THRESHOLD_M);
+  // Admin-corrected punches have no GPS by design — missing GPS isn't a problem.
+  const locBad = (!hasGps && !p.source_request_id) || (distM !== null && distM > FAR_THRESHOLD_M);
   return { timeBad, locBad };
 }
 
@@ -269,6 +282,19 @@ function PunchBadges({
         </>
       )}
     </div>
+  );
+}
+
+// Icon shown under a shift whose in→out span exceeds LONG_SHIFT_HOURS.
+function DurationWarn({ t }: { t: (key: string, vars?: Record<string, string | number>) => string }) {
+  return (
+    <span
+      className="inline-flex items-center px-2 py-1 rounded-md bg-amber-100 text-amber-800 text-xs"
+      title={t('admin.longShiftWarn', { hours: LONG_SHIFT_HOURS })}
+      aria-label={t('admin.longShiftWarn', { hours: LONG_SHIFT_HOURS })}
+    >
+      ⏱️
+    </span>
   );
 }
 
@@ -565,6 +591,19 @@ export function AdminDashboard() {
     return m;
   }, [rows]);
 
+  // Per-day set of employee ids with an unpaired shift that day (clocked in
+  // without out, or vice versa) — present but with a missing punch.
+  const incompleteByDay = useMemo(() => {
+    const m = new Map<string, Set<string>>();
+    for (const s of shifts) {
+      if (s.in && s.out) continue; // complete pair
+      const empId = (s.in ?? s.out!).employee_id;
+      if (!m.has(s.date)) m.set(s.date, new Set());
+      m.get(s.date)!.add(empId);
+    }
+    return m;
+  }, [shifts]);
+
   const stats = useMemo(() => {
     const todayKey = madridTodayKey();
     const byEmployee = new Map<string, { name: string; rows: Row[] }>();
@@ -846,7 +885,9 @@ export function AdminDashboard() {
                 <div className="justify-self-start">
                   {s.in && <PunchBadges p={s.in} offices={offices} t={t} />}
                 </div>
-                <span />
+                <div className="justify-self-center">
+                  {isLongShift(s) && <DurationWarn t={t} />}
+                </div>
                 <div className="justify-self-start">
                   {s.out && <PunchBadges p={s.out} offices={offices} t={t} />}
                 </div>
@@ -877,7 +918,11 @@ export function AdminDashboard() {
               // filtered to one person.
               const absent = isSingleEmployee
                 ? []
-                : missingEmployees(absenceRoster, presentByDay.get(date) ?? new Set());
+                : attendanceProblems(
+                    absenceRoster,
+                    presentByDay.get(date) ?? new Set(),
+                    incompleteByDay.get(date) ?? new Set(),
+                  );
               const absentNames = absent.map(m => m.full_name);
               return (
                 <section key={date} className="app-card overflow-hidden">

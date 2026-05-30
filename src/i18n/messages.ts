@@ -122,6 +122,7 @@ interface Messages {
     warningsCollapse: string;
     absentExpand: string; // uses {count}
     absentCollapse: string;
+    longShiftWarn: string; // uses {hours}
     filterAll: string;
     filterLabel: string;
     rangeLabel: string;
@@ -183,6 +184,7 @@ interface Messages {
       title: string;
       monthLabel: string;
       download: string;
+      downloadPdf: string;
       generating: string;
       failed: string;        // uses {code}
     };
@@ -354,8 +356,9 @@ export const MESSAGES: Record<Lang, Messages> = {
       abnormalTimeOut: '下班时间不正常',
       warningsExpand: '查看警告',
       warningsCollapse: '收起',
-      absentExpand: '{count} 人未打卡',
+      absentExpand: '{count} 人考勤异常',
       absentCollapse: '收起',
+      longShiftWarn: '工时过长（超过 {hours} 小时）',
       filterAll: '全部员工',
       filterLabel: '员工筛选',
       rangeLabel: '范围',
@@ -411,6 +414,7 @@ export const MESSAGES: Record<Lang, Messages> = {
         title: '导出月度 CSV',
         monthLabel: '月份 (YYYY-MM)',
         download: '下载 CSV',
+        downloadPdf: '下载 PDF',
         generating: '生成中…',
         failed: '导出失败：{code}',
       },
@@ -590,8 +594,9 @@ export const MESSAGES: Record<Lang, Messages> = {
       abnormalTimeOut: 'Unusual clock-out time',
       warningsExpand: 'Show warnings',
       warningsCollapse: 'Collapse',
-      absentExpand: '{count} didn’t clock in',
+      absentExpand: '{count} with attendance issues',
       absentCollapse: 'Collapse',
+      longShiftWarn: 'Shift longer than {hours}h',
       filterAll: 'All employees',
       filterLabel: 'Filter by employee',
       rangeLabel: 'Range',
@@ -647,6 +652,7 @@ export const MESSAGES: Record<Lang, Messages> = {
         title: 'Export monthly CSV',
         monthLabel: 'Month (YYYY-MM)',
         download: 'Download CSV',
+        downloadPdf: 'Download PDF',
         generating: 'Generating…',
         failed: 'Export failed: {code}',
       },
@@ -826,8 +832,9 @@ export const MESSAGES: Record<Lang, Messages> = {
       abnormalTimeOut: 'Hora de salida inusual',
       warningsExpand: 'Ver avisos',
       warningsCollapse: 'Contraer',
-      absentExpand: '{count} sin fichar',
+      absentExpand: '{count} con incidencias',
       absentCollapse: 'Contraer',
+      longShiftWarn: 'Jornada de más de {hours} h',
       filterAll: 'Todos los empleados',
       filterLabel: 'Filtrar por empleado',
       rangeLabel: 'Rango',
@@ -883,6 +890,7 @@ export const MESSAGES: Record<Lang, Messages> = {
         title: 'Exportar CSV mensual',
         monthLabel: 'Mes (AAAA-MM)',
         download: 'Descargar CSV',
+        downloadPdf: 'Descargar PDF',
         generating: 'Generando…',
         failed: 'Exportación fallida: {code}',
       },
