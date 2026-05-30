@@ -17,6 +17,12 @@ type Props =
   | {
       mode: 'add';
       employees: { id: string; full_name: string }[];
+      // When set, the employee is fixed (no dropdown) — e.g. when adding from a
+      // day header while the dashboard is filtered to one person.
+      lockedEmployeeId?: string;
+      lockedEmployeeName?: string;
+      // YYYY-MM-DD to prefill the time field's date with (time defaults to now).
+      defaultDate?: string;
       onClose: () => void;
       onDone: () => void;
     }
@@ -51,16 +57,28 @@ function toLocalInput(iso: string): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
+// YYYY-MM-DD → datetime-local value on that date at the current wall-clock time.
+function dateKeyToLocalInput(dateKey: string): string {
+  const now = new Date();
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${dateKey}T${pad(now.getHours())}:${pad(now.getMinutes())}`;
+}
+
 export function PunchCorrectionModal(props: Props) {
   const { t } = useTranslation();
-  const [employeeId, setEmployeeId] = useState('');
+  const lockedEmployeeId = props.mode === 'add' ? props.lockedEmployeeId : undefined;
+  const [employeeId, setEmployeeId] = useState(lockedEmployeeId ?? '');
   const initialKind =
     props.mode === 'modify' ? props.target.kind
     : props.mode === 'add-missing' ? props.kind
     : 'in';
   const initialIso = props.mode === 'modify' ? props.target.effective_time : '';
+  const initialDatetime =
+    initialIso ? toLocalInput(initialIso)
+    : props.mode === 'add' && props.defaultDate ? dateKeyToLocalInput(props.defaultDate)
+    : '';
   const [kind, setKind] = useState<'in' | 'out'>(initialKind);
-  const [datetime, setDatetime] = useState(initialIso ? toLocalInput(initialIso) : '');
+  const [datetime, setDatetime] = useState(initialDatetime);
   const [reason, setReason] = useState('');
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -110,6 +128,7 @@ export function PunchCorrectionModal(props: Props) {
   const modifyTarget = props.mode === 'modify' ? props.target : null;
   const summaryEmployeeName =
     props.mode === 'add-missing' ? props.employeeName
+    : props.mode === 'add' ? props.lockedEmployeeName ?? ''
     : modifyTarget?.employee_name ?? deleteTargets[0]?.employee_name ?? '';
 
   return (
@@ -118,7 +137,7 @@ export function PunchCorrectionModal(props: Props) {
         <h2 className="text-lg font-bold text-slate-900">{t(titleKey)}</h2>
 
         <form onSubmit={submit} className="space-y-4">
-          {props.mode === 'add' && (
+          {props.mode === 'add' && !lockedEmployeeId && (
             <label className="block space-y-1.5">
               <span className="text-sm font-medium text-slate-700">{t('admin.correct.employeeLabel')}</span>
               <select required value={employeeId} onChange={e => setEmployeeId(e.target.value)} className="app-input">
@@ -128,7 +147,7 @@ export function PunchCorrectionModal(props: Props) {
             </label>
           )}
 
-          {(props.mode === 'modify' || props.mode === 'delete' || props.mode === 'add-missing') && summaryEmployeeName && (
+          {(props.mode === 'modify' || props.mode === 'delete' || props.mode === 'add-missing' || (props.mode === 'add' && lockedEmployeeId)) && summaryEmployeeName && (
             <div className="text-sm text-slate-600">
               <span className="text-slate-500">{t('admin.correct.employeeLabel')}: </span>
               {summaryEmployeeName}

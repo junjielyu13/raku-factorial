@@ -30,7 +30,7 @@ interface Row extends EffectivePunch {
 interface EmployeeOption { id: string; full_name: string }
 
 type ModalState =
-  | { mode: 'add' }
+  | { mode: 'add'; date?: string; employeeId?: string; employeeName?: string }
   | { mode: 'modify'; target: CorrectionTarget }
   | { mode: 'delete'; targets: CorrectionTarget[] }
   | { mode: 'add-missing'; employeeId: string; employeeName: string; kind: 'in' | 'out' };
@@ -710,9 +710,25 @@ export function AdminDashboard() {
               return (
                 <section key={date} className="app-card overflow-hidden">
                   <header className="px-4 py-3 border-b border-slate-100 flex items-center justify-between gap-3 bg-slate-50/60">
-                    <div className="text-sm font-semibold text-slate-900">
-                      {formatDate(dayAnchor.effective_time)}
-                      <span className="ml-2 font-normal text-slate-500">{formatWeekday(dayAnchor.effective_time)}</span>
+                    <div className="flex items-center gap-1 text-sm font-semibold text-slate-900">
+                      <span>{formatDate(dayAnchor.effective_time)}</span>
+                      <span className="ml-1 font-normal text-slate-500">{formatWeekday(dayAnchor.effective_time)}</span>
+                      <button
+                        type="button"
+                        onClick={() => setModal({
+                          mode: 'add',
+                          date,
+                          employeeId: isSingleEmployee ? filterEmployeeId : undefined,
+                          employeeName: isSingleEmployee ? employees.find(e => e.id === filterEmployeeId)?.full_name : undefined,
+                        })}
+                        className="ml-1 h-6 w-6 inline-flex items-center justify-center rounded-md text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 transition"
+                        title={t('admin.correct.addForDay')}
+                        aria-label={t('admin.correct.addForDay')}
+                      >
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4" aria-hidden="true">
+                          <path d="M12 5v14M5 12h14" />
+                        </svg>
+                      </button>
                     </div>
                     <div className="flex items-center gap-1.5 text-sm text-slate-700">
                       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4 text-slate-500" aria-hidden="true">
@@ -756,6 +772,9 @@ export function AdminDashboard() {
         <PunchCorrectionModal
           mode="add"
           employees={employees}
+          lockedEmployeeId={modal.employeeId}
+          lockedEmployeeName={modal.employeeName}
+          defaultDate={modal.date}
           onClose={() => setModal(null)}
           onDone={() => { setModal(null); fetchPunches(); }}
         />

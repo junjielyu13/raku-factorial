@@ -78,6 +78,8 @@ interface Messages {
     type: string;
     actualTime: string;
     reason: string;
+    commonReasonsHint: string;
+    commonReasons: string[];
     submit: string;
     submitting: string;
     requestModifyTitle: string;
@@ -174,6 +176,7 @@ interface Messages {
       modify: string;
       delete: string;
       addPunch: string;
+      addForDay: string;
       modalAddTitle: string;
       modalModifyTitle: string;
       modalDeleteTitle: string;
@@ -279,6 +282,14 @@ export const MESSAGES: Record<Lang, Messages> = {
       type: '类型',
       actualTime: '实际时间',
       reason: '原因',
+      commonReasonsHint: '常用理由（点击填入）',
+      commonReasons: [
+        '忘记打卡',
+        '设备 / 网络故障',
+        'GPS 定位失败',
+        '外出办公 / 出差',
+        '加班未打卡',
+      ],
       submit: '提交',
       submitting: '提交中…',
       requestModifyTitle: '申请修改打卡时间',
@@ -381,6 +392,7 @@ export const MESSAGES: Record<Lang, Messages> = {
         modify: '修改',
         delete: '删除',
         addPunch: '补登打卡',
+        addForDay: '为该日补登打卡',
         modalAddTitle: '补登打卡',
         modalModifyTitle: '修改打卡',
         modalDeleteTitle: '删除打卡',
@@ -494,6 +506,14 @@ export const MESSAGES: Record<Lang, Messages> = {
       type: 'Type',
       actualTime: 'Actual time',
       reason: 'Reason',
+      commonReasonsHint: 'Common reasons (tap to fill in)',
+      commonReasons: [
+        'Forgot to clock in/out',
+        'Device / network failure',
+        'GPS location failed',
+        'Working off-site / business trip',
+        'Overtime not clocked',
+      ],
       submit: 'Submit',
       submitting: 'Submitting…',
       requestModifyTitle: 'Request time change',
@@ -596,6 +616,7 @@ export const MESSAGES: Record<Lang, Messages> = {
         modify: 'Modify',
         delete: 'Delete',
         addPunch: 'Add punch',
+        addForDay: 'Add punch for this day',
         modalAddTitle: 'Add punch',
         modalModifyTitle: 'Modify punch',
         modalDeleteTitle: 'Delete punch',
@@ -709,6 +730,14 @@ export const MESSAGES: Record<Lang, Messages> = {
       type: 'Tipo',
       actualTime: 'Hora real',
       reason: 'Motivo',
+      commonReasonsHint: 'Motivos frecuentes (toca para rellenar)',
+      commonReasons: [
+        'Olvidé fichar',
+        'Fallo del dispositivo / la red',
+        'Fallo de localización GPS',
+        'Trabajo fuera de la oficina / viaje',
+        'Horas extra sin fichar',
+      ],
       submit: 'Enviar',
       submitting: 'Enviando…',
       requestModifyTitle: 'Solicitar cambio de hora',
@@ -811,6 +840,7 @@ export const MESSAGES: Record<Lang, Messages> = {
         modify: 'Modificar',
         delete: 'Eliminar',
         addPunch: 'Añadir fichaje',
+        addForDay: 'Añadir fichaje para este día',
         modalAddTitle: 'Añadir fichaje',
         modalModifyTitle: 'Modificar fichaje',
         modalDeleteTitle: 'Eliminar fichaje',
