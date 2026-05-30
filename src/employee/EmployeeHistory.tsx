@@ -3,13 +3,14 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../auth/useAuth';
-import { formatDate, formatWeekday, formatTime, madridDayKeyOf, madridDayRange, madridTodayKey, madridWeekStartKey, madridWeekRange, addDaysKey, madridLastNDaysStart } from '../lib/time';
+import { formatDate, formatWeekday, formatTime, madridDayKeyOf, madridDayRange, madridTodayKey, madridWeekStartKey, madridWeekRange, madridLastNDaysStart } from '../lib/time';
 import { pairShifts, msToHm } from '../lib/worked';
 import type { ShiftPair } from '../lib/worked';
 import { useTranslation } from '../i18n/LanguageContext';
 import type { EffectivePunch } from '../lib/types';
 import { EditRequestModal } from '../components/EditRequestModal';
 import type { EditTarget } from '../components/EditRequestModal';
+import WeekPicker from '../admin/WeekPicker';
 
 type Filter = 'last7' | 'last30' | 'week' | 'day';
 
@@ -305,27 +306,13 @@ export function EmployeeHistory() {
           </label>
         )}
         {filter === 'week' && (
-          <div className="flex items-center justify-between gap-2 rounded-lg bg-white ring-1 ring-slate-200 px-2 py-1.5">
-            <button
-              type="button"
-              onClick={() => setSelectedWeekStart(w => addDaysKey(w, -7))}
-              className="h-8 w-8 inline-flex items-center justify-center rounded-md text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition"
-              title={t('history.weekPrev')}
-              aria-label={t('history.weekPrev')}
-            >
-              ‹
-            </button>
-            <span className="text-sm font-medium text-slate-800 tabular-nums">{weekLabel}</span>
-            <button
-              type="button"
-              onClick={() => setSelectedWeekStart(w => addDaysKey(w, 7))}
-              disabled={selectedWeekStart >= currentWeekStart}
-              className="h-8 w-8 inline-flex items-center justify-center rounded-md text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition disabled:opacity-30 disabled:cursor-not-allowed"
-              title={t('history.weekNext')}
-              aria-label={t('history.weekNext')}
-            >
-              ›
-            </button>
+          <div className="flex justify-center">
+            <WeekPicker
+              weekStart={selectedWeekStart}
+              currentWeekStart={currentWeekStart}
+              onChange={setSelectedWeekStart}
+              t={t}
+            />
           </div>
         )}
       </div>
