@@ -28,11 +28,13 @@ type Props =
       onDone: () => void;
     }
   | {
-      // Add the missing punch of an incomplete shift. The kind is fixed
-      // (the user clicked the strayOut or openShift chip); they enter
-      // when the punch should have been + a reason.
+      // Request a brand-new punch. When `kind` is set the type is fixed (e.g.
+      // filling the missing punch of an incomplete shift); when omitted the
+      // user picks 上班/下班. `defaultDate` (YYYY-MM-DD) prefills the date — used
+      // by the per-day "+" header button. The user enters time + reason.
       mode: 'add';
-      kind: 'in' | 'out';
+      kind?: 'in' | 'out';
+      defaultDate?: string;
       onClose: () => void;
       onDone: () => void;
     };
@@ -43,11 +45,23 @@ function toLocalInput(iso: string): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
+// YYYY-MM-DD → datetime-local value on that date at the current wall-clock time.
+function dateKeyToLocalInput(dateKey: string): string {
+  const now = new Date();
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${dateKey}T${pad(now.getHours())}:${pad(now.getMinutes())}`;
+}
+
 export function EditRequestModal(props: Props) {
   const { t, lang } = useTranslation();
   const commonReasons = MESSAGES[lang].editRequest.commonReasons;
   const initialIso = props.mode === 'modify' ? props.target.effective_time : '';
-  const [datetime, setDatetime] = useState(initialIso ? toLocalInput(initialIso) : '');
+  const initialDatetime =
+    initialIso ? toLocalInput(initialIso)
+    : props.mode === 'add' && props.defaultDate ? dateKeyToLocalInput(props.defaultDate)
+    : '';
+  const [kind, setKind] = useState<'in' | 'out'>(props.mode === 'add' ? (props.kind ?? 'in') : 'in');
+  const [datetime, setDatetime] = useState(initialDatetime);
   const [reason, setReason] = useState('');
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -66,7 +80,7 @@ export function EditRequestModal(props: Props) {
       } else if (props.mode === 'add') {
         await submitEditRequest({
           action: 'add',
-          requested_kind: props.kind,
+          requested_kind: kind,
           requested_time: new Date(datetime).toISOString(),
           reason,
         });
@@ -120,8 +134,21 @@ export function EditRequestModal(props: Props) {
           )}
 
           {props.mode === 'add' && (
-            <div className="rounded-lg bg-slate-50 px-3 py-2 text-sm text-slate-700">
-              {props.kind === 'in' ? t('punch.in') : t('punch.out')}
+            <div className="space-y-1.5">
+              <span className="text-sm font-medium text-slate-700">{t('editRequest.type')}</span>
+              <div className="grid grid-cols-2 gap-2 rounded-lg bg-slate-100 p-1">
+                {(['in', 'out'] as const).map(k => (
+                  <button
+                    type="button"
+                    key={k}
+                    onClick={() => setKind(k)}
+                    disabled={props.kind != null}
+                    className={`py-2 rounded-md text-sm font-medium transition disabled:cursor-not-allowed ${kind === k ? 'bg-white shadow text-slate-900' : 'text-slate-600'}`}
+                  >
+                    {t(`punch.${k}`)}
+                  </button>
+                ))}
+              </div>
             </div>
           )}
 
