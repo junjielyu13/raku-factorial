@@ -6,7 +6,7 @@ import { useAuth } from '../auth/useAuth';
 import { PunchButton } from '../components/PunchButton';
 import { LanguagePicker } from '../components/LanguagePicker';
 import { LogoutButton } from '../components/LogoutButton';
-import { formatTime, formatDate, formatWeekday, formatDateTime, madridDayKeyOf, madridTodayKey } from '../lib/time';
+import { formatTime, formatDate, formatWeekday, formatDateTime, madridDayKeyOf, madridTodayKey, madridLastNDaysStart } from '../lib/time';
 import { pairShifts, msToHm } from '../lib/worked';
 import type { ShiftPair } from '../lib/worked';
 import { useTranslation } from '../i18n/LanguageContext';
@@ -42,7 +42,7 @@ export function EmployeeHome() {
   const load = useCallback(async () => {
     if (!profile) return;
     setLoading(true);
-    const since = new Date(Date.now() - LOOKBACK_DAYS * 24 * 60 * 60 * 1000).toISOString();
+    const since = madridLastNDaysStart(LOOKBACK_DAYS);
     const { data } = await supabase
       .from('effective_punches')
       .select('*')
