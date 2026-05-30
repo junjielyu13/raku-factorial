@@ -31,7 +31,14 @@ function dtFmt() {
   });
 }
 
+function monthYearFmt() {
+  return new Intl.DateTimeFormat(currentLocale, {
+    timeZone: 'Europe/Madrid', year: 'numeric', month: 'long',
+  });
+}
+
 export const formatDate = (iso: string) => dateFmt().format(new Date(iso));
+export const formatMonthYear = (iso: string) => monthYearFmt().format(new Date(iso));
 export const formatWeekday = (iso: string) => weekdayFmt().format(new Date(iso));
 export const formatTime = (iso: string) => timeFmt().format(new Date(iso));
 export const formatDateTime = (iso: string) => dtFmt().format(new Date(iso));

@@ -138,6 +138,13 @@ interface Messages {
       title: string;
       total: string;  // uses {h}, {m}
       hours: string;  // uses {h}, {m}
+      targetSuffix: string;  // uses {h}
+      overTarget: string;
+    };
+    weekPicker: {
+      open: string;
+      prevMonth: string;
+      nextMonth: string;
     };
     noPunchesRange: string;
     dayNoPunches: string;
@@ -359,6 +366,13 @@ export const MESSAGES: Record<Lang, Messages> = {
         title: '工时统计',
         total: '合计 {h} 小时 {m} 分',
         hours: '{h} 小时 {m} 分',
+        targetSuffix: '/ {h} 小时',
+        overTarget: '超出每周工时',
+      },
+      weekPicker: {
+        open: '选择周',
+        prevMonth: '上个月',
+        nextMonth: '下个月',
       },
       noPunchesRange: '该范围内没有打卡记录',
       dayNoPunches: '当天无打卡',
@@ -588,6 +602,13 @@ export const MESSAGES: Record<Lang, Messages> = {
         title: 'Hours worked',
         total: 'Total {h}h {m}m',
         hours: '{h}h {m}m',
+        targetSuffix: '/ {h}h',
+        overTarget: 'Over weekly target',
+      },
+      weekPicker: {
+        open: 'Pick a week',
+        prevMonth: 'Previous month',
+        nextMonth: 'Next month',
       },
       noPunchesRange: 'No punches in this range',
       dayNoPunches: 'No punches',
@@ -817,6 +838,13 @@ export const MESSAGES: Record<Lang, Messages> = {
         title: 'Horas trabajadas',
         total: 'Total {h} h {m} min',
         hours: '{h} h {m} min',
+        targetSuffix: '/ {h} h',
+        overTarget: 'Supera la jornada semanal',
+      },
+      weekPicker: {
+        open: 'Elegir semana',
+        prevMonth: 'Mes anterior',
+        nextMonth: 'Mes siguiente',
       },
       noPunchesRange: 'Sin fichajes en este rango',
       dayNoPunches: 'Sin fichajes',

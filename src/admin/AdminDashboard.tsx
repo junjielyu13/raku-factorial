@@ -11,10 +11,27 @@ import { LanguagePicker } from '../components/LanguagePicker';
 import { LogoutButton } from '../components/LogoutButton';
 import { PunchCorrectionModal } from '../components/PunchCorrectionModal';
 import type { CorrectionTarget } from '../components/PunchCorrectionModal';
+import WeekPicker from './WeekPicker';
 import type { EffectivePunch, Employee } from '../lib/types';
 import { OFFICE, OFFICES, type OfficeCoords } from '../lib/office';
 
 type RangeFilter = 'day' | 'last7' | 'last30' | 'week' | 'custom';
+
+// Contractual weekly working time (RD-ley 8/2019 schedule for this company).
+// Used only in the "week" range to flag under/over the weekly target.
+const WEEKLY_TARGET_HOURS = 41;
+const WEEKLY_TARGET_MS = WEEKLY_TARGET_HOURS * 60 * 60 * 1000;
+
+// Renders " / 41 小时" after a worked time, with a ⚠️ when over the weekly target.
+function WeeklyTargetSuffix({ ms, t }: { ms: number; t: (key: string, vars?: Record<string, string | number>) => string }) {
+  const over = ms > WEEKLY_TARGET_MS;
+  return (
+    <span className={`ml-1 font-normal ${over ? 'text-amber-700' : 'text-slate-400'}`}>
+      {' '}{t('admin.stats.targetSuffix', { h: WEEKLY_TARGET_HOURS })}
+      {over && <span title={t('admin.stats.overTarget')}> ⚠️</span>}
+    </span>
+  );
+}
 
 function daysAgoKey(days: number): string {
   return madridDayKeyOf(new Date(Date.now() - days * 24 * 60 * 60 * 1000));
@@ -418,11 +435,40 @@ export function AdminDashboard() {
     [visibleRows],
   );
 
-  const totalPages = Math.max(1, Math.ceil(shifts.length / pageSize));
-  const safePage = Math.min(page, totalPages - 1);
-  const pagedShifts = shifts.slice(safePage * pageSize, (safePage + 1) * pageSize);
-
   const todayKey = madridTodayKey();
+
+  // Every calendar day in the selected range (newest-first), so the list shows
+  // empty days too — not just days that happen to have punches. Days after today
+  // are dropped: there can be no punches there yet.
+  const rangeDayKeys = useMemo(() => {
+    let startKey: string;
+    let endKey: string;
+    if (rangeFilter === 'day') {
+      return [selectedDate]; // an explicitly chosen day is shown as-is
+    } else if (rangeFilter === 'week') {
+      const wr = madridWeekRange(selectedWeekStart);
+      startKey = wr.startKey;
+      endKey = wr.endKey;
+    } else if (rangeFilter === 'custom') {
+      if (customStart > customEnd) return [];
+      startKey = customStart;
+      endKey = customEnd;
+    } else {
+      const days = rangeFilter === 'last7' ? 7 : 30;
+      startKey = addDaysKey(todayKey, -(days - 1));
+      endKey = todayKey;
+    }
+    if (endKey > todayKey) endKey = todayKey; // hide not-yet-reached days
+    if (startKey > endKey) return [];
+    const keys: string[] = [];
+    for (let k = endKey; k >= startKey; k = addDaysKey(k, -1)) keys.push(k);
+    return keys;
+  }, [rangeFilter, selectedDate, selectedWeekStart, customStart, customEnd, todayKey]);
+
+  // Paginate by DAY now that empty days are shown — pageSize counts days.
+  const totalPages = Math.max(1, Math.ceil(rangeDayKeys.length / pageSize));
+  const safePage = Math.min(page, totalPages - 1);
+
   function shiftMs(s: Shift): number {
     if (s.in && s.out) {
       return new Date(s.out.effective_time).getTime() - new Date(s.in.effective_time).getTime();
@@ -452,10 +498,11 @@ export function AdminDashboard() {
     return m;
   }, [shifts, todayKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Group paginated shifts by day, then by employee within each day.
-  const pagedShiftsGrouped = useMemo(() => {
+  // Index all shifts by day → employee (full set, not paginated) so any day on
+  // the current page can be populated.
+  const shiftsByDay = useMemo(() => {
     const days = new Map<string, Map<string, { name: string; shifts: Shift[] }>>();
-    for (const s of pagedShifts) {
+    for (const s of shifts) {
       const anchor = s.in ?? s.out!;
       const empId = anchor.employee_id;
       if (!days.has(s.date)) days.set(s.date, new Map());
@@ -463,13 +510,22 @@ export function AdminDashboard() {
       if (!empMap.has(empId)) empMap.set(empId, { name: anchor.employee.full_name, shifts: [] });
       empMap.get(empId)!.shifts.push(s);
     }
-    return Array.from(days.entries()).map(([date, empMap]) => ({
-      date,
-      employees: Array.from(empMap.entries())
-        .map(([empId, v]) => ({ empId, name: v.name, shifts: v.shifts }))
-        .sort((a, b) => a.name.localeCompare(b.name)),
-    }));
-  }, [pagedShifts]);
+    return days;
+  }, [shifts]);
+
+  // One entry per day on the current page — empty days included. Each entry's
+  // employees are sorted by name; days with no punches get an empty list.
+  const pagedShiftsGrouped = useMemo(() => {
+    return rangeDayKeys.slice(safePage * pageSize, (safePage + 1) * pageSize).map(date => {
+      const empMap = shiftsByDay.get(date);
+      const employees = empMap
+        ? Array.from(empMap.entries())
+            .map(([empId, v]) => ({ empId, name: v.name, shifts: v.shifts }))
+            .sort((a, b) => a.name.localeCompare(b.name))
+        : [];
+      return { date, employees };
+    });
+  }, [rangeDayKeys, safePage, pageSize, shiftsByDay]);
 
   // Employees expected to clock in: everyone active except IT (who holds admin
   // rights but doesn't punch). Used to flag per-day absences.
@@ -514,7 +570,7 @@ export function AdminDashboard() {
     });
     perEmployee.sort((a, b) => b.ms - a.ms || a.name.localeCompare(b.name));
     const grandMs = perEmployee.reduce((a, b) => a + b.ms, 0);
-    return { perEmployee, grand: msToHm(grandMs) };
+    return { perEmployee, grand: msToHm(grandMs), grandMs };
   }, [visibleRows]);
 
   // Week-picker derived values (cheap; computed each render).
@@ -600,28 +656,12 @@ export function AdminDashboard() {
           </label>
         )}
         {rangeFilter === 'week' && (
-          <div className="flex items-center gap-1 rounded-lg bg-white ring-1 ring-slate-300 px-1 py-0.5">
-            <button
-              type="button"
-              onClick={() => setSelectedWeekStart(w => addDaysKey(w, -7))}
-              className="h-8 w-8 inline-flex items-center justify-center rounded-md text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition"
-              title={t('history.weekPrev')}
-              aria-label={t('history.weekPrev')}
-            >
-              ‹
-            </button>
-            <span className="px-2 text-sm font-medium text-slate-800 tabular-nums whitespace-nowrap">{weekLabel}</span>
-            <button
-              type="button"
-              onClick={() => setSelectedWeekStart(w => addDaysKey(w, 7))}
-              disabled={selectedWeekStart >= currentWeekStart}
-              className="h-8 w-8 inline-flex items-center justify-center rounded-md text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition disabled:opacity-30 disabled:cursor-not-allowed"
-              title={t('history.weekNext')}
-              aria-label={t('history.weekNext')}
-            >
-              ›
-            </button>
-          </div>
+          <WeekPicker
+            weekStart={selectedWeekStart}
+            currentWeekStart={currentWeekStart}
+            onChange={setSelectedWeekStart}
+            t={t}
+          />
         )}
         {rangeFilter === 'custom' && (
           <>
@@ -677,6 +717,11 @@ export function AdminDashboard() {
             <h2 className="text-xs font-semibold uppercase tracking-wider text-slate-500">{t('admin.stats.title')}</h2>
             <span className="text-sm font-semibold text-slate-900 tabular-nums">
               {t('admin.stats.total', { h: stats.grand.h, m: stats.grand.m })}
+              {/* The grand total only maps to a single 41h target when one
+                  employee is filtered; otherwise it sums several people. */}
+              {rangeFilter === 'week' && filterEmployeeId !== 'all' && (
+                <WeeklyTargetSuffix ms={stats.grandMs} t={t} />
+              )}
             </span>
           </div>
           <ul className="divide-y divide-slate-100">
@@ -687,6 +732,7 @@ export function AdminDashboard() {
                   <span className="text-sm text-slate-700">{s.name}</span>
                   <span className="text-sm font-mono tabular-nums text-slate-900">
                     {t('admin.stats.hours', { h: hm.h, m: hm.m })}
+                    {rangeFilter === 'week' && <WeeklyTargetSuffix ms={s.ms} t={t} />}
                   </span>
                 </li>
               );
@@ -696,10 +742,10 @@ export function AdminDashboard() {
       )}
 
       {(() => {
-        if (visibleRows.length === 0) {
+        if (rangeDayKeys.length === 0) {
           return (
             <div className="app-card px-4 py-8 text-center text-slate-500 text-sm">
-              {rangeFilter === 'day' ? t('admin.noPunchesToday') : t('admin.noPunchesRange')}
+              {t('admin.noPunchesRange')}
             </div>
           );
         }
@@ -798,7 +844,9 @@ export function AdminDashboard() {
         return (
           <div className="space-y-3">
             {pagedShiftsGrouped.map(({ date, employees: dayEmployees }) => {
-              const dayAnchor = dayEmployees[0].shifts[0].in ?? dayEmployees[0].shifts[0].out!;
+              // Derive the header date from the day key itself (not a punch) so
+              // empty days render too. Noon UTC is the same Madrid calendar day.
+              const dayIso = `${date}T12:00:00Z`;
               const dayHm = msToHm(shiftDayTotalsMs.get(date) ?? 0);
               // Absences only make sense across the whole roster, not when
               // filtered to one person.
@@ -809,8 +857,8 @@ export function AdminDashboard() {
                 <section key={date} className="app-card overflow-hidden">
                   <header className="px-4 py-3 border-b border-slate-100 flex items-center justify-between gap-3 bg-slate-50/60">
                     <div className="flex flex-wrap items-center gap-1 text-sm font-semibold text-slate-900">
-                      <span>{formatDate(dayAnchor.effective_time)}</span>
-                      <span className="ml-1 font-normal text-slate-500">{formatWeekday(dayAnchor.effective_time)}</span>
+                      <span>{formatDate(dayIso)}</span>
+                      <span className="ml-1 font-normal text-slate-500">{formatWeekday(dayIso)}</span>
                       <button
                         type="button"
                         onClick={() => setModal({
@@ -857,6 +905,9 @@ export function AdminDashboard() {
                       </div>
                     );
                   })}
+                  {dayEmployees.length === 0 && (
+                    <div className="px-4 py-3 text-sm text-slate-400">{t('admin.dayNoPunches')}</div>
+                  )}
                 </section>
               );
             })}
