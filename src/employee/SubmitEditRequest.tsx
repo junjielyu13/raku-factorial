@@ -5,10 +5,12 @@ import { Link, useNavigate } from 'react-router-dom';
 import { submitEditRequest } from '../lib/api';
 import type { ApiError } from '../lib/api';
 import { useTranslation } from '../i18n/LanguageContext';
+import { MESSAGES } from '../i18n/messages';
 
 export function SubmitEditRequest() {
   const nav = useNavigate();
-  const { t } = useTranslation();
+  const { t, lang } = useTranslation();
+  const commonReasons = MESSAGES[lang].editRequest.commonReasons;
   const [kind, setKind] = useState<'in' | 'out'>('in');
   const [datetime, setDatetime] = useState('');
   const [reason, setReason] = useState('');
@@ -59,11 +61,28 @@ export function SubmitEditRequest() {
             className="app-input" />
         </label>
 
-        <label className="block space-y-1.5">
+        <div className="space-y-1.5">
           <span className="text-sm font-medium text-slate-700">{t('editRequest.reason')}</span>
+          <div className="flex flex-wrap gap-2">
+            <span className="w-full text-xs text-slate-500">{t('editRequest.commonReasonsHint')}</span>
+            {commonReasons.map(r => (
+              <button
+                type="button"
+                key={r}
+                onClick={() => setReason(r)}
+                className={`rounded-full px-3 py-1 text-sm ring-1 transition ${
+                  reason === r
+                    ? 'bg-emerald-600 text-white ring-emerald-600'
+                    : 'bg-white text-slate-700 ring-slate-300 hover:bg-slate-50'
+                }`}
+              >
+                {r}
+              </button>
+            ))}
+          </div>
           <textarea required value={reason} onChange={e => setReason(e.target.value)}
             rows={3} className="app-input resize-none" />
-        </label>
+        </div>
 
         <button type="submit" disabled={busy} className="app-btn-primary">
           {busy ? t('editRequest.submitting') : t('editRequest.submit')}
