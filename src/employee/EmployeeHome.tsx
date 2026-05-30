@@ -21,17 +21,30 @@ function initials(name: string | undefined): string {
 
 const LOOKBACK_DAYS = 7;
 
-// Returns the previous Madrid month ("YYYY-MM") if today is within the first
-// BACKUP_REMINDER_DAYS of the month; null otherwise.
-const BACKUP_REMINDER_DAYS = 3;
+// Reminds the admin to back up a single month M during a continuous window that
+// straddles the month boundary: the last BACKUP_REMINDER_LAST_DAYS of M plus the
+// first BACKUP_REMINDER_FIRST_DAYS of the following month. Both halves return the
+// same "YYYY-MM" (month M), so a single dismiss covers the whole window.
+// Returns null outside the window.
+const BACKUP_REMINDER_FIRST_DAYS = 3;
+const BACKUP_REMINDER_LAST_DAYS = 2;
 function backupReminderMonth(todayKey: string): string | null {
   const [yStr, mStr, dStr] = todayKey.split('-');
-  if (parseInt(dStr, 10) > BACKUP_REMINDER_DAYS) return null;
   const y = parseInt(yStr, 10);
   const m = parseInt(mStr, 10);
-  const prevY = m === 1 ? y - 1 : y;
-  const prevM = m === 1 ? 12 : m - 1;
-  return `${prevY}-${String(prevM).padStart(2, '0')}`;
+  const d = parseInt(dStr, 10);
+  // First few days of the month → back up the previous month.
+  if (d <= BACKUP_REMINDER_FIRST_DAYS) {
+    const prevY = m === 1 ? y - 1 : y;
+    const prevM = m === 1 ? 12 : m - 1;
+    return `${prevY}-${String(prevM).padStart(2, '0')}`;
+  }
+  // Last few days of the month → back up the current (about-to-close) month.
+  const lastDay = new Date(Date.UTC(y, m, 0)).getUTCDate(); // day 0 of next month
+  if (d >= lastDay - (BACKUP_REMINDER_LAST_DAYS - 1)) {
+    return `${y}-${String(m).padStart(2, '0')}`;
+  }
+  return null;
 }
 
 export function EmployeeHome() {
