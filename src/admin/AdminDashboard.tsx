@@ -48,7 +48,7 @@ interface Row extends EffectivePunch {
 interface EmployeeOption { id: string; full_name: string; role: 'employee' | 'admin' | 'it' }
 
 type ModalState =
-  | { mode: 'add'; date?: string; employeeId?: string; employeeName?: string }
+  | { mode: 'add'; date?: string; employeeId?: string; employeeName?: string; defaultEmployeeId?: string }
   | { mode: 'modify'; target: CorrectionTarget }
   | { mode: 'delete'; targets: CorrectionTarget[] }
   | { mode: 'add-missing'; employeeId: string; employeeName: string; kind: 'in' | 'out' };
@@ -853,9 +853,10 @@ export function AdminDashboard() {
               const dayHm = msToHm(shiftDayTotalsMs.get(date) ?? 0);
               // Absences only make sense across the whole roster, not when
               // filtered to one person.
-              const absentNames = isSingleEmployee
+              const absent = isSingleEmployee
                 ? []
-                : missingEmployees(absenceRoster, presentByDay.get(date) ?? new Set()).map(m => m.full_name);
+                : missingEmployees(absenceRoster, presentByDay.get(date) ?? new Set());
+              const absentNames = absent.map(m => m.full_name);
               return (
                 <section key={date} className="app-card overflow-hidden">
                   <header className="px-4 py-3 border-b border-slate-100 flex items-center justify-between gap-3 bg-slate-50/60">
@@ -869,6 +870,9 @@ export function AdminDashboard() {
                           date,
                           employeeId: isSingleEmployee ? filterEmployeeId : undefined,
                           employeeName: isSingleEmployee ? employees.find(e => e.id === filterEmployeeId)?.full_name : undefined,
+                          // Pre-select the (first) absent employee so the admin
+                          // can fill their missing punch in one click; still changeable.
+                          defaultEmployeeId: absent[0]?.id,
                         })}
                         className="ml-1 h-6 w-6 inline-flex items-center justify-center rounded-md text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 transition"
                         title={t('admin.correct.addForDay')}
@@ -927,6 +931,7 @@ export function AdminDashboard() {
           employees={employees}
           lockedEmployeeId={modal.employeeId}
           lockedEmployeeName={modal.employeeName}
+          defaultEmployeeId={modal.defaultEmployeeId}
           defaultDate={modal.date}
           onClose={() => setModal(null)}
           onDone={() => { setModal(null); fetchPunches(); }}

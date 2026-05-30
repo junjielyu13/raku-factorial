@@ -22,6 +22,10 @@ type Props =
       // day header while the dashboard is filtered to one person.
       lockedEmployeeId?: string;
       lockedEmployeeName?: string;
+      // Pre-select this employee in the dropdown but keep it changeable (unlike
+      // lockedEmployeeId, which hides the dropdown). Used when adding from a day
+      // that has a flagged absent employee.
+      defaultEmployeeId?: string;
       // YYYY-MM-DD to prefill the time field's date with (time defaults to now).
       defaultDate?: string;
       onClose: () => void;
@@ -69,7 +73,8 @@ export function PunchCorrectionModal(props: Props) {
   const { t, lang } = useTranslation();
   const commonReasons = MESSAGES[lang].editRequest.commonReasons;
   const lockedEmployeeId = props.mode === 'add' ? props.lockedEmployeeId : undefined;
-  const [employeeId, setEmployeeId] = useState(lockedEmployeeId ?? '');
+  const defaultEmployeeId = props.mode === 'add' ? props.defaultEmployeeId : undefined;
+  const [employeeId, setEmployeeId] = useState(lockedEmployeeId ?? defaultEmployeeId ?? '');
   const initialKind =
     props.mode === 'modify' ? props.target.kind
     : props.mode === 'add-missing' ? props.kind
