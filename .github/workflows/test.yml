@@ -11,7 +11,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: denoland/setup-deno@v2
         with:
-          deno-version: v2.x
+          deno-version: v2.7.14   # pinned: floating v2.x changed byonm defaults and broke CI
       - uses: supabase/setup-cli@v1
         with:
           version: latest
