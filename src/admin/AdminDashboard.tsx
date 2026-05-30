@@ -348,7 +348,7 @@ export function AdminDashboard() {
   const offices = OFFICES;
   const [employees, setEmployees] = useState<EmployeeOption[]>([]);
   const [filterEmployeeId, setFilterEmployeeId] = useState<string>('all');
-  const [rangeFilter, setRangeFilter] = useState<RangeFilter>('last7');
+  const [rangeFilter, setRangeFilter] = useState<RangeFilter>('week');
   const [selectedDate, setSelectedDate] = useState<string>(madridTodayKey());
   const [selectedWeekStart, setSelectedWeekStart] = useState<string>(() => madridWeekStartKey(madridTodayKey()));
   const [customStart, setCustomStart] = useState<string>(() => daysAgoKey(7));
@@ -635,10 +635,10 @@ export function AdminDashboard() {
             onChange={e => setRangeFilter(e.target.value as RangeFilter)}
             className="px-3 py-1.5 rounded-lg bg-white ring-1 ring-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
           >
-            <option value="day">{t('admin.range.day')}</option>
+            <option value="week">{t('admin.range.week')}</option>
             <option value="last7">{t('admin.range.last7')}</option>
             <option value="last30">{t('admin.range.last30')}</option>
-            <option value="week">{t('admin.range.week')}</option>
+            <option value="day">{t('admin.range.day')}</option>
             <option value="custom">{t('admin.range.custom')}</option>
           </select>
         </label>

@@ -158,7 +158,7 @@ export function EmployeeHistory() {
   const [rows, setRows] = useState<EffectivePunch[]>([]);
   const [pending, setPending] = useState<PendingReq[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState<Filter>('last7');
+  const [filter, setFilter] = useState<Filter>('week');
   const [selectedDate, setSelectedDate] = useState<string>(madridTodayKey());
   const [selectedWeekStart, setSelectedWeekStart] = useState<string>(() => madridWeekStartKey(madridTodayKey()));
   const [pageSize, setPageSize] = useState<PageSize>(10);
@@ -277,7 +277,7 @@ export function EmployeeHistory() {
 
       <div className="space-y-3">
         <div className="grid grid-cols-2 gap-2 rounded-lg bg-slate-100 p-1">
-          {(['last7', 'last30', 'week', 'day'] as const).map(f => (
+          {(['week', 'last7', 'last30', 'day'] as const).map(f => (
             <button
               key={f}
               type="button"
