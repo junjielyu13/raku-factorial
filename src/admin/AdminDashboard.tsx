@@ -26,7 +26,7 @@ const WEEKLY_TARGET_MS = WEEKLY_TARGET_HOURS * 60 * 60 * 1000;
 function WeeklyTargetSuffix({ ms, t }: { ms: number; t: (key: string, vars?: Record<string, string | number>) => string }) {
   const over = ms > WEEKLY_TARGET_MS;
   return (
-    <span className={`ml-1 font-normal ${over ? 'text-amber-700' : 'text-slate-400'}`}>
+    <span className={`ml-1 font-medium ${over ? 'text-rose-600' : 'text-emerald-600'}`}>
       {' '}{t('admin.stats.targetSuffix', { h: WEEKLY_TARGET_HOURS })}
       {over && <span title={t('admin.stats.overTarget')}> ⚠️</span>}
     </span>
@@ -198,24 +198,26 @@ function TimeWarnPill({
   if (isPunchTimeNormal(p.kind, p.effective_time)) return null;
   return (
     <span className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-amber-100 text-amber-800 text-xs">
-      ⚠️ {t(p.kind === 'in' ? 'admin.abnormalTimeIn' : 'admin.abnormalTimeOut')}
+      ⏰ {t(p.kind === 'in' ? 'admin.abnormalTimeIn' : 'admin.abnormalTimeOut')}
     </span>
   );
 }
 
-// How many warning pills a punch would render (time-abnormal + location).
-function warningCount(p: Row, offices: OfficeCoords[]): number {
+// Which warnings a punch has (time-abnormal + location). Used to summarise the
+// punch with one icon per issue before the row is expanded.
+function punchWarnings(p: Row, offices: OfficeCoords[]): { timeBad: boolean; locBad: boolean } {
   const timeBad = !isPunchTimeNormal(p.kind, p.effective_time);
   const lat = p.punch?.latitude;
   const lng = p.punch?.longitude;
   const hasGps = typeof lat === 'number' && typeof lng === 'number';
   const distM = distanceToNearestOffice(lat, lng, offices);
   const locBad = !hasGps || (distM !== null && distM > FAR_THRESHOLD_M);
-  return (timeBad ? 1 : 0) + (locBad ? 1 : 0);
+  return { timeBad, locBad };
 }
 
-// Warning pills for one punch. They stay collapsed behind a single ⚠️ icon
-// so rows don't get cluttered; clicking the icon toggles the full pills.
+// Warning summary for one punch: the relevant issue icons (⏰ time, 📍 location)
+// shown side by side so the problem is visible without expanding. Clicking
+// expands them into full-text pills.
 function PunchBadges({
   p,
   offices,
@@ -226,8 +228,8 @@ function PunchBadges({
   t: (key: string, vars?: Record<string, string | number>) => string;
 }) {
   const [open, setOpen] = useState(false);
-  const count = warningCount(p, offices);
-  if (count === 0) return null;
+  const { timeBad, locBad } = punchWarnings(p, offices);
+  if (!timeBad && !locBad) return null;
 
   return (
     <div className="flex flex-wrap items-center gap-1">
@@ -241,7 +243,8 @@ function PunchBadges({
           open ? 'bg-amber-200 text-amber-900' : 'bg-amber-100 text-amber-800 hover:bg-amber-200'
         }`}
       >
-        ⚠️ {count}
+        {timeBad && <span aria-hidden="true">⏰</span>}
+        {locBad && <span aria-hidden="true">📍</span>}
       </button>
       {open && (
         <>
@@ -277,7 +280,7 @@ function AbsenceWarn({
           open ? 'bg-amber-200 text-amber-900' : 'bg-amber-100 text-amber-800 hover:bg-amber-200'
         }`}
       >
-        ⚠️ {names.length}
+        🚫 {names.length}
       </button>
       {open && names.map(n => (
         <span
