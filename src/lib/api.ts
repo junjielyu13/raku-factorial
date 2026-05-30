@@ -1,5 +1,6 @@
 // src/lib/api.ts
 import { supabase } from './supabase';
+import type { Period } from './monthlyPdf';
 
 interface PunchInArgs {
   kind: 'in' | 'out';
@@ -53,9 +54,9 @@ async function invoke<T>(name: string, body: unknown, method: 'POST' | 'GET' = '
 }
 
 export interface MonthExport {
-  month: string;
+  period: string;
   punches: { employee_id: string; kind: 'in' | 'out'; effective_time: string; email: string; full_name: string }[];
-  totals: { employee_id: string; email: string; worked_total: string | null }[];
+  totals: { email: string; hours: number }[];
 }
 
 export function punchIn(args: PunchInArgs) {
@@ -81,12 +82,18 @@ export function rejectEdit(request_id: string, note: string) {
   return invoke<{ ok: true }>('reject-edit', { request_id, note });
 }
 
-export function exportMonthCsv(month: string) {
-  return invoke<string>('export-month', null, 'GET', { month });
+function periodParams(p: Period): Record<string, string> {
+  if (p.scope === 'month') return { month: p.month };
+  if (p.scope === 'year') return { year: p.year };
+  return { scope: 'all' };
 }
 
-export function exportMonthData(month: string) {
-  return invoke<MonthExport>('export-month', null, 'GET', { month, format: 'json' }, 'json');
+export function exportCsv(period: Period) {
+  return invoke<string>('export-month', null, 'GET', periodParams(period));
+}
+
+export function exportData(period: Period) {
+  return invoke<MonthExport>('export-month', null, 'GET', { ...periodParams(period), format: 'json' }, 'json');
 }
 
 export function adminCorrectPunch(args: {

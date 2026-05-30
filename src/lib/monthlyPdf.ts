@@ -110,14 +110,32 @@ export function buildReportModel(punches: PunchRow[], dni: Record<string, string
 const MONTHS_ES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
   'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
 
-const monthLabel = (month: string) => {
-  const [y, m] = month.split('-').map(Number);
-  return `${MONTHS_ES[m - 1]} de ${y}`;
-};
+// The export period selected in the UI.
+export type Period =
+  | { scope: 'month'; month: string } // YYYY-MM
+  | { scope: 'year'; year: string }   // YYYY
+  | { scope: 'all' };
+
+// Human label shown on the report (fixed Spanish).
+export function periodLabel(p: Period): string {
+  if (p.scope === 'month') {
+    const [y, m] = p.month.split('-').map(Number);
+    return `${MONTHS_ES[m - 1]} de ${y}`;
+  }
+  if (p.scope === 'year') return p.year;
+  return 'Histórico completo';
+}
+
+// Suffix used in the download filename.
+export function periodFileSuffix(p: Period): string {
+  if (p.scope === 'month') return p.month;
+  if (p.scope === 'year') return p.year;
+  return 'completo';
+}
 
 // Returns a pdfmake docDefinition. Pure (no pdfmake import) so it is unit-testable.
-export function buildDocDefinition(model: EmployeeReport[], company: CompanyInfo, month: string) {
-  const label = monthLabel(month);
+export function buildDocDefinition(model: EmployeeReport[], company: CompanyInfo, period: Period) {
+  const label = periodLabel(period);
 
   const employeePage = (emp: EmployeeReport, index: number) => {
     const tableBody = [
@@ -175,13 +193,13 @@ export function buildDocDefinition(model: EmployeeReport[], company: CompanyInfo
 // Build the report from the month's punches and trigger a browser download.
 // pdfmake (and its embedded fonts) is imported here, lazily, so it stays out of
 // the main bundle and is only fetched when the user actually exports a PDF.
-export async function downloadMonthlyPdf(punches: PunchRow[], month: string): Promise<void> {
-  const doc = buildDocDefinition(buildReportModel(punches, EMPLOYEE_DNI), COMPANY_INFO, month);
+export async function downloadMonthlyPdf(punches: PunchRow[], period: Period): Promise<void> {
+  const doc = buildDocDefinition(buildReportModel(punches, EMPLOYEE_DNI), COMPANY_INFO, period);
   /* eslint-disable @typescript-eslint/no-explicit-any */
   const pdfMakeMod: any = await import('pdfmake/build/pdfmake');
   const vfsMod: any = await import('pdfmake/build/vfs_fonts');
   const pdfMake = pdfMakeMod.default ?? pdfMakeMod;
   pdfMake.vfs = vfsMod.default ?? vfsMod;
   /* eslint-enable @typescript-eslint/no-explicit-any */
-  pdfMake.createPdf(doc).download(`registro-jornada-${month}.pdf`);
+  pdfMake.createPdf(doc).download(`registro-jornada-${periodFileSuffix(period)}.pdf`);
 }

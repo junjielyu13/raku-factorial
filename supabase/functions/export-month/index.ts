@@ -52,14 +52,32 @@ Deno.serve(async (req) => {
 
     const user = await authenticate(req);
     const url = new URL(req.url);
-    const month = url.searchParams.get('month');
-    if (!month || !/^\d{4}-\d{2}$/.test(month)) throw new HttpError(400, 'BAD_MONTH');
     const format = url.searchParams.get('format') ?? 'csv';
     if (format !== 'csv' && format !== 'json') throw new HttpError(400, 'BAD_FORMAT');
 
-    const [y, m] = month.split('-').map(Number);
-    const start = new Date(Date.UTC(y, m - 1, 1, 0, 0, 0));   // start of month UTC
-    const end   = new Date(Date.UTC(y, m,     1, 0, 0, 0));
+    // Export period: scope=all (no date filter), year=YYYY, or month=YYYY-MM.
+    // `period` is used for the filename / report label.
+    const scope = url.searchParams.get('scope');
+    const month = url.searchParams.get('month');
+    const year = url.searchParams.get('year');
+    let start: Date | null = null;
+    let end: Date | null = null;
+    let period: string;
+    if (scope === 'all') {
+      period = 'completo';
+    } else if (year !== null) {
+      if (!/^\d{4}$/.test(year)) throw new HttpError(400, 'BAD_YEAR');
+      const y = Number(year);
+      start = new Date(Date.UTC(y, 0, 1, 0, 0, 0));
+      end   = new Date(Date.UTC(y + 1, 0, 1, 0, 0, 0));
+      period = year;
+    } else {
+      if (!month || !/^\d{4}-\d{2}$/.test(month)) throw new HttpError(400, 'BAD_MONTH');
+      const [y, m] = month.split('-').map(Number);
+      start = new Date(Date.UTC(y, m - 1, 1, 0, 0, 0));
+      end   = new Date(Date.UTC(y, m, 1, 0, 0, 0));
+      period = month;
+    }
 
     const admin = adminClient();
 
@@ -67,9 +85,9 @@ Deno.serve(async (req) => {
       .from('effective_punches')
       .select('employee_id, kind, effective_time, employees(email, full_name)')
       .is('superseded_at', null)
-      .gte('effective_time', start.toISOString())
-      .lt('effective_time', end.toISOString())
       .order('effective_time', { ascending: true });
+    if (start) query = query.gte('effective_time', start.toISOString());
+    if (end)   query = query.lt('effective_time', end.toISOString());
     if (user.role !== 'admin' && user.role !== 'it') {
       query = query.eq('employee_id', user.id);
     }
@@ -79,18 +97,26 @@ Deno.serve(async (req) => {
 
     let totalsQuery = admin
       .from('monthly_hours')
-      .select('employee_id, month, worked_total, employees!inner(email)')
-      .gte('month', start.toISOString().slice(0, 10))
-      .lt('month', end.toISOString().slice(0, 10));
+      .select('employee_id, month, worked_total, employees!inner(email)');
+    if (start) totalsQuery = totalsQuery.gte('month', start.toISOString().slice(0, 10));
+    if (end)   totalsQuery = totalsQuery.lt('month', end.toISOString().slice(0, 10));
     if (user.role !== 'admin' && user.role !== 'it') {
       totalsQuery = totalsQuery.eq('employee_id', user.id);
     }
     const { data: totals } = await totalsQuery;
 
+    // monthly_hours has one row per (employee, month); for year/all scopes sum
+    // them into a single total per employee.
+    const totalsByEmail = new Map<string, number>();
+    for (const t of totals ?? []) {
+      const email = (t as any).employees.email as string;
+      totalsByEmail.set(email, (totalsByEmail.get(email) ?? 0) + intervalToHours(t.worked_total as string | null));
+    }
+
     // JSON: flat structured data; the frontend builds the compliance PDF from it.
     if (format === 'json') {
       const body = {
-        month,
+        period,
         punches: (rows ?? []).map((r) => {
           const emp = (r as any).employees;
           return {
@@ -101,11 +127,7 @@ Deno.serve(async (req) => {
             full_name: emp.full_name,
           };
         }),
-        totals: (totals ?? []).map((t) => ({
-          employee_id: t.employee_id,
-          email: (t as any).employees.email,
-          worked_total: t.worked_total ?? null,
-        })),
+        totals: [...totalsByEmail].map(([email, hours]) => ({ email, hours })),
       };
       return new Response(JSON.stringify(body), {
         status: 200,
@@ -132,15 +154,11 @@ Deno.serve(async (req) => {
         t.toISOString(),
       ].join(','));
     }
-    // Append per-employee totals from monthly_hours.
+    // Append per-employee totals (summed across months for year/all scopes).
     lines.push('');
     lines.push(['employee_email', 'worked_total_hours'].join(','));
-    for (const t of totals ?? []) {
-      const emp = (t as any).employees;
-      const interval = t.worked_total as string | null; // Postgres interval, e.g. "08:00:00" or "1 day 02:30:00"
-      // Convert interval to hours (approx). Postgres returns ISO 8601 duration or HH:MM:SS depending on driver.
-      const hours = intervalToHours(interval);
-      lines.push([csvEscape(emp.email), hours.toFixed(2)].join(','));
+    for (const [email, hours] of totalsByEmail) {
+      lines.push([csvEscape(email), hours.toFixed(2)].join(','));
     }
     const csv = lines.join('\n') + '\n';
 
@@ -148,7 +166,7 @@ Deno.serve(async (req) => {
       status: 200,
       headers: {
         'Content-Type': 'text/csv; charset=utf-8',
-        'Content-Disposition': `attachment; filename="punches-${month}.csv"`,
+        'Content-Disposition': `attachment; filename="punches-${period}.csv"`,
         'Access-Control-Allow-Origin': '*',
       },
     });

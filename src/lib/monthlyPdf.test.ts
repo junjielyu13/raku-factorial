@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildReportModel, buildDocDefinition, type PunchRow } from './monthlyPdf';
+import { buildReportModel, buildDocDefinition, periodLabel, periodFileSuffix, type PunchRow, type Period } from './monthlyPdf';
 
 // Helper: a punch in UTC. May 2026 is CEST (UTC+2), so 10:31Z -> 12:31 Madrid.
 function p(employee_id: string, full_name: string, kind: 'in' | 'out', isoUtc: string, email = `${employee_id}@x.es`): PunchRow {
@@ -92,6 +92,30 @@ describe('buildReportModel', () => {
   });
 });
 
+describe('periodLabel', () => {
+  it('formats a month in Spanish', () => {
+    expect(periodLabel({ scope: 'month', month: '2026-05' })).toBe('mayo de 2026');
+  });
+  it('formats a year as the bare year', () => {
+    expect(periodLabel({ scope: 'year', year: '2026' })).toBe('2026');
+  });
+  it('labels the all-time scope in Spanish', () => {
+    expect(periodLabel({ scope: 'all' }).toLowerCase()).toContain('hist');
+  });
+});
+
+describe('periodFileSuffix', () => {
+  it('uses YYYY-MM for a month', () => {
+    expect(periodFileSuffix({ scope: 'month', month: '2026-05' })).toBe('2026-05');
+  });
+  it('uses YYYY for a year', () => {
+    expect(periodFileSuffix({ scope: 'year', year: '2026' })).toBe('2026');
+  });
+  it('uses a static suffix for all-time', () => {
+    expect(periodFileSuffix({ scope: 'all' })).toBe('completo');
+  });
+});
+
 describe('buildDocDefinition', () => {
   const model = [
     { employeeId: 'a', fullName: 'Ana', dni: '___', totalHoras: '4:27',
@@ -99,23 +123,29 @@ describe('buildDocDefinition', () => {
     { employeeId: 'b', fullName: 'Bruno', dni: '___', totalHoras: '0:00', rows: [] },
   ];
   const company = { name: 'Mi Empresa SL', cif: 'B12345678' };
+  const month: Period = { scope: 'month', month: '2026-05' };
 
   it('starts each employee after the first on a new page (one page per employee)', () => {
-    const doc = buildDocDefinition(model, company, '2026-05');
+    const doc = buildDocDefinition(model, company, month);
     const pageBreaks = JSON.stringify(doc.content).match(/"pageBreak":"before"/g) ?? [];
     expect(pageBreaks).toHaveLength(model.length - 1);
   });
 
-  it('includes the company identity and the month in the document', () => {
-    const doc = buildDocDefinition(model, company, '2026-05');
+  it('includes the company identity and the period label in the document', () => {
+    const doc = buildDocDefinition(model, company, month);
     const text = JSON.stringify(doc.content);
     expect(text).toContain('Mi Empresa SL');
     expect(text).toContain('B12345678');
     expect(text.toLowerCase()).toContain('mayo');
   });
 
+  it('reflects a year period in the header', () => {
+    const doc = buildDocDefinition(model, company, { scope: 'year', year: '2026' });
+    expect(JSON.stringify(doc.content)).toContain('2026');
+  });
+
   it('renders a page x/y footer', () => {
-    const doc = buildDocDefinition(model, company, '2026-05');
+    const doc = buildDocDefinition(model, company, month);
     const footer = doc.footer(2, 3);
     expect(JSON.stringify(footer)).toContain('2');
     expect(JSON.stringify(footer)).toContain('3');

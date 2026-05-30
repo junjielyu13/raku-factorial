@@ -182,7 +182,12 @@ interface Messages {
     };
     export: {
       title: string;
+      rangeLabel: string;
+      scopeMonth: string;
+      scopeYear: string;
+      scopeAll: string;
       monthLabel: string;
+      yearLabel: string;
       download: string;
       downloadPdf: string;
       generating: string;
@@ -412,8 +417,13 @@ export const MESSAGES: Record<Lang, Messages> = {
         targetLabel: '目标记录：',
       },
       export: {
-        title: '导出月度 CSV',
+        title: '导出考勤',
+        rangeLabel: '范围',
+        scopeMonth: '月度',
+        scopeYear: '年度',
+        scopeAll: '全部',
         monthLabel: '月份 (YYYY-MM)',
+        yearLabel: '年份',
         download: '下载 CSV',
         downloadPdf: '下载 PDF',
         generating: '生成中…',
@@ -651,8 +661,13 @@ export const MESSAGES: Record<Lang, Messages> = {
         targetLabel: 'Target:',
       },
       export: {
-        title: 'Export monthly CSV',
+        title: 'Export records',
+        rangeLabel: 'Range',
+        scopeMonth: 'Month',
+        scopeYear: 'Year',
+        scopeAll: 'All',
         monthLabel: 'Month (YYYY-MM)',
+        yearLabel: 'Year',
         download: 'Download CSV',
         downloadPdf: 'Download PDF',
         generating: 'Generating…',
@@ -890,8 +905,13 @@ export const MESSAGES: Record<Lang, Messages> = {
         targetLabel: 'Registro:',
       },
       export: {
-        title: 'Exportar CSV mensual',
+        title: 'Exportar registros',
+        rangeLabel: 'Rango',
+        scopeMonth: 'Mes',
+        scopeYear: 'Año',
+        scopeAll: 'Todo',
         monthLabel: 'Mes (AAAA-MM)',
+        yearLabel: 'Año',
         download: 'Descargar CSV',
         downloadPdf: 'Descargar PDF',
         generating: 'Generando…',
