@@ -11,6 +11,7 @@ import { pairShifts, msToHm } from '../lib/worked';
 import type { ShiftPair } from '../lib/worked';
 import { useTranslation } from '../i18n/LanguageContext';
 import type { EffectivePunch } from '../lib/types';
+import { isAdminRole } from '../lib/types';
 
 function initials(name: string | undefined): string {
   if (!name) return '·';
@@ -75,7 +76,7 @@ export function EmployeeHome() {
 
   const shifts = useMemo(() => pairShifts(rows), [rows]);
 
-  const reminderMonth = profile?.role === 'admin' ? backupReminderMonth(todayKey) : null;
+  const reminderMonth = profile && isAdminRole(profile.role) ? backupReminderMonth(todayKey) : null;
   const reminderKey = reminderMonth ? `backupReminder.dismissed.${reminderMonth}` : null;
   const [reminderDismissed, setReminderDismissed] = useState<boolean>(
     () => reminderKey ? localStorage.getItem(reminderKey) === '1' : false,
@@ -236,7 +237,7 @@ export function EmployeeHome() {
         <Link to="/history" className="app-card px-4 py-3 text-sm text-slate-700 text-center hover:bg-slate-50">
           {t('home.myHistory')}
         </Link>
-        {profile?.role === 'admin' && (
+        {profile && isAdminRole(profile.role) && (
           <Link to="/admin" className="app-card px-4 py-3 text-sm font-medium text-emerald-700 text-center hover:bg-emerald-50">
             {t('home.adminLink')} →
           </Link>

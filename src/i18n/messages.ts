@@ -120,6 +120,8 @@ interface Messages {
     abnormalTimeOut: string;
     warningsExpand: string;
     warningsCollapse: string;
+    absentExpand: string; // uses {count}
+    absentCollapse: string;
     filterAll: string;
     filterLabel: string;
     rangeLabel: string;
@@ -138,6 +140,7 @@ interface Messages {
       hours: string;  // uses {h}, {m}
     };
     noPunchesRange: string;
+    dayNoPunches: string;
     table: {
       time: string;
       person: string;
@@ -344,6 +347,8 @@ export const MESSAGES: Record<Lang, Messages> = {
       abnormalTimeOut: '下班时间不正常',
       warningsExpand: '查看警告',
       warningsCollapse: '收起',
+      absentExpand: '{count} 人未打卡',
+      absentCollapse: '收起',
       filterAll: '全部员工',
       filterLabel: '员工筛选',
       rangeLabel: '范围',
@@ -356,6 +361,7 @@ export const MESSAGES: Record<Lang, Messages> = {
         hours: '{h} 小时 {m} 分',
       },
       noPunchesRange: '该范围内没有打卡记录',
+      dayNoPunches: '当天无打卡',
       table: {
         time: '时间',
         person: '员工',
@@ -570,6 +576,8 @@ export const MESSAGES: Record<Lang, Messages> = {
       abnormalTimeOut: 'Unusual clock-out time',
       warningsExpand: 'Show warnings',
       warningsCollapse: 'Collapse',
+      absentExpand: '{count} didn’t clock in',
+      absentCollapse: 'Collapse',
       filterAll: 'All employees',
       filterLabel: 'Filter by employee',
       rangeLabel: 'Range',
@@ -582,6 +590,7 @@ export const MESSAGES: Record<Lang, Messages> = {
         hours: '{h}h {m}m',
       },
       noPunchesRange: 'No punches in this range',
+      dayNoPunches: 'No punches',
       table: {
         time: 'Time',
         person: 'Employee',
@@ -796,6 +805,8 @@ export const MESSAGES: Record<Lang, Messages> = {
       abnormalTimeOut: 'Hora de salida inusual',
       warningsExpand: 'Ver avisos',
       warningsCollapse: 'Contraer',
+      absentExpand: '{count} sin fichar',
+      absentCollapse: 'Contraer',
       filterAll: 'Todos los empleados',
       filterLabel: 'Filtrar por empleado',
       rangeLabel: 'Rango',
@@ -808,6 +819,7 @@ export const MESSAGES: Record<Lang, Messages> = {
         hours: '{h} h {m} min',
       },
       noPunchesRange: 'Sin fichajes en este rango',
+      dayNoPunches: 'Sin fichajes',
       table: {
         time: 'Hora',
         person: 'Empleado',

@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { formatTime, formatDate, formatWeekday, madridDayRange, madridDayKeyOf, madridTodayKey, madridMinutesOfDay, madridWeekStartKey, madridWeekRange, addDaysKey, madridLastNDaysStart } from '../lib/time';
 import { workedMsForDay, msToHm, pairShifts } from '../lib/worked';
+import { missingEmployees } from '../lib/absence';
 import type { ShiftPair } from '../lib/worked';
 import { useTranslation } from '../i18n/LanguageContext';
 import { LanguagePicker } from '../components/LanguagePicker';
@@ -27,7 +28,7 @@ interface Row extends EffectivePunch {
   punch: { latitude: number | null; longitude: number | null; accuracy_m: number | null } | null;
 }
 
-interface EmployeeOption { id: string; full_name: string }
+interface EmployeeOption { id: string; full_name: string; role: 'employee' | 'admin' | 'it' }
 
 type ModalState =
   | { mode: 'add'; date?: string; employeeId?: string; employeeName?: string }
@@ -235,6 +236,44 @@ function PunchBadges({
   );
 }
 
+// Per-day absence badge: roster members who didn't punch that day. Collapsed
+// behind a single ⚠️ N icon; clicking expands the list of names.
+function AbsenceWarn({
+  names,
+  t,
+}: {
+  names: string[];
+  t: (key: string, vars?: Record<string, string | number>) => string;
+}) {
+  const [open, setOpen] = useState(false);
+  if (names.length === 0) return null;
+
+  return (
+    <div className="flex flex-wrap items-center gap-1">
+      <button
+        type="button"
+        onClick={() => setOpen(o => !o)}
+        aria-expanded={open}
+        title={open ? t('admin.absentCollapse') : t('admin.absentExpand', { count: names.length })}
+        aria-label={open ? t('admin.absentCollapse') : t('admin.absentExpand', { count: names.length })}
+        className={`inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium transition ${
+          open ? 'bg-amber-200 text-amber-900' : 'bg-amber-100 text-amber-800 hover:bg-amber-200'
+        }`}
+      >
+        ⚠️ {names.length}
+      </button>
+      {open && names.map(n => (
+        <span
+          key={n}
+          className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-amber-100 text-amber-800"
+        >
+          {n}
+        </span>
+      ))}
+    </div>
+  );
+}
+
 // Read-only modal describing the punch time + location rules.
 function RulesModal({
   t,
@@ -306,7 +345,7 @@ export function AdminDashboard() {
   }, [rangeFilter, selectedDate, selectedWeekStart, customStart, customEnd, filterEmployeeId, pageSize]);
 
   useEffect(() => {
-    supabase.from('employees').select('id, full_name').eq('active', true).order('full_name')
+    supabase.from('employees').select('id, full_name, role').eq('active', true).order('full_name')
       .then(({ data }) => setEmployees((data as EmployeeOption[]) ?? []));
   }, []);
 
@@ -431,6 +470,25 @@ export function AdminDashboard() {
         .sort((a, b) => a.name.localeCompare(b.name)),
     }));
   }, [pagedShifts]);
+
+  // Employees expected to clock in: everyone active except IT (who holds admin
+  // rights but doesn't punch). Used to flag per-day absences.
+  const absenceRoster = useMemo(
+    () => employees.filter(e => e.role !== 'it').map(e => ({ id: e.id, full_name: e.full_name })),
+    [employees],
+  );
+
+  // Per-day set of employee ids that punched at least once. Built from the full
+  // fetched rows (not paginated) so a day split across pages isn't misread.
+  const presentByDay = useMemo(() => {
+    const m = new Map<string, Set<string>>();
+    for (const r of rows) {
+      const dk = madridDayKeyOf(r.effective_time);
+      if (!m.has(dk)) m.set(dk, new Set());
+      m.get(dk)!.add(r.employee_id);
+    }
+    return m;
+  }, [rows]);
 
   const stats = useMemo(() => {
     const todayKey = madridTodayKey();
@@ -742,10 +800,15 @@ export function AdminDashboard() {
             {pagedShiftsGrouped.map(({ date, employees: dayEmployees }) => {
               const dayAnchor = dayEmployees[0].shifts[0].in ?? dayEmployees[0].shifts[0].out!;
               const dayHm = msToHm(shiftDayTotalsMs.get(date) ?? 0);
+              // Absences only make sense across the whole roster, not when
+              // filtered to one person.
+              const absentNames = isSingleEmployee
+                ? []
+                : missingEmployees(absenceRoster, presentByDay.get(date) ?? new Set()).map(m => m.full_name);
               return (
                 <section key={date} className="app-card overflow-hidden">
                   <header className="px-4 py-3 border-b border-slate-100 flex items-center justify-between gap-3 bg-slate-50/60">
-                    <div className="flex items-center gap-1 text-sm font-semibold text-slate-900">
+                    <div className="flex flex-wrap items-center gap-1 text-sm font-semibold text-slate-900">
                       <span>{formatDate(dayAnchor.effective_time)}</span>
                       <span className="ml-1 font-normal text-slate-500">{formatWeekday(dayAnchor.effective_time)}</span>
                       <button
@@ -764,6 +827,7 @@ export function AdminDashboard() {
                           <path d="M12 5v14M5 12h14" />
                         </svg>
                       </button>
+                      <AbsenceWarn names={absentNames} t={t} />
                     </div>
                     <div className="flex items-center gap-1.5 text-sm text-slate-700">
                       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4 text-slate-500" aria-hidden="true">

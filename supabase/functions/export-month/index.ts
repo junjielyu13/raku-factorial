@@ -68,7 +68,7 @@ Deno.serve(async (req) => {
       .gte('effective_time', start.toISOString())
       .lt('effective_time', end.toISOString())
       .order('effective_time', { ascending: true });
-    if (user.role !== 'admin') {
+    if (user.role !== 'admin' && user.role !== 'it') {
       query = query.eq('employee_id', user.id);
     }
 
@@ -98,7 +98,7 @@ Deno.serve(async (req) => {
       .select('employee_id, month, worked_total, employees!inner(email)')
       .gte('month', start.toISOString().slice(0, 10))
       .lt('month', end.toISOString().slice(0, 10));
-    if (user.role !== 'admin') {
+    if (user.role !== 'admin' && user.role !== 'it') {
       totalsQuery = totalsQuery.eq('employee_id', user.id);
     }
     const { data: totals } = await totalsQuery;

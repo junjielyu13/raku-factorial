@@ -3,8 +3,14 @@ export interface Employee {
   id: string;
   email: string;
   full_name: string;
-  role: 'employee' | 'admin';
+  role: 'employee' | 'admin' | 'it';
   active: boolean;
+}
+
+// 'it' holds full admin privileges (it just doesn't clock in). Use this for
+// every admin gate so the two roles stay in sync.
+export function isAdminRole(role: Employee['role']): boolean {
+  return role === 'admin' || role === 'it';
 }
 
 export interface Punch {
