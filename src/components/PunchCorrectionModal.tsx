@@ -51,6 +51,9 @@ type Props =
       employeeId: string;
       employeeName: string;
       kind: 'in' | 'out';
+      // YYYY-MM-DD of the shift, used to prefill the time field's date (time
+      // defaults to now) so the admin doesn't pick the day manually.
+      defaultDate?: string;
       onClose: () => void;
       onDone: () => void;
     };
@@ -80,9 +83,11 @@ export function PunchCorrectionModal(props: Props) {
     : props.mode === 'add-missing' ? props.kind
     : 'in';
   const initialIso = props.mode === 'modify' ? props.target.effective_time : '';
+  const defaultDate =
+    (props.mode === 'add' || props.mode === 'add-missing') ? props.defaultDate : undefined;
   const initialDatetime =
     initialIso ? toLocalInput(initialIso)
-    : props.mode === 'add' && props.defaultDate ? dateKeyToLocalInput(props.defaultDate)
+    : defaultDate ? dateKeyToLocalInput(defaultDate)
     : '';
   const [kind, setKind] = useState<'in' | 'out'>(initialKind);
   const [datetime, setDatetime] = useState(initialDatetime);

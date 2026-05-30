@@ -67,7 +67,7 @@ type ModalState =
   | { mode: 'add'; date?: string; employeeId?: string; employeeName?: string; defaultEmployeeId?: string }
   | { mode: 'modify'; target: CorrectionTarget }
   | { mode: 'delete'; targets: CorrectionTarget[] }
-  | { mode: 'add-missing'; employeeId: string; employeeName: string; kind: 'in' | 'out' };
+  | { mode: 'add-missing'; employeeId: string; employeeName: string; kind: 'in' | 'out'; defaultDate?: string };
 
 type Shift = ShiftPair<Row>;
 
@@ -825,7 +825,7 @@ export function AdminDashboard() {
                 ) : (
                   <button
                     type="button"
-                    onClick={() => setModal({ mode: 'add-missing', kind: 'in', employeeId: s.out!.employee_id, employeeName: s.out!.employee.full_name })}
+                    onClick={() => setModal({ mode: 'add-missing', kind: 'in', employeeId: s.out!.employee_id, employeeName: s.out!.employee.full_name, defaultDate: s.date })}
                     className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-amber-100 text-amber-800 text-sm font-medium hover:bg-amber-200 transition"
                   >
                     ❓ {t('admin.shifts.strayOut')}
@@ -837,7 +837,7 @@ export function AdminDashboard() {
                 ) : (
                   <button
                     type="button"
-                    onClick={() => setModal({ mode: 'add-missing', kind: 'out', employeeId: s.in!.employee_id, employeeName: s.in!.employee.full_name })}
+                    onClick={() => setModal({ mode: 'add-missing', kind: 'out', employeeId: s.in!.employee_id, employeeName: s.in!.employee.full_name, defaultDate: s.date })}
                     className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-amber-100 text-amber-800 text-sm font-medium hover:bg-amber-200 transition"
                   >
                     ❓ {t('admin.shifts.openShift')}
@@ -971,6 +971,7 @@ export function AdminDashboard() {
           employeeId={modal.employeeId}
           employeeName={modal.employeeName}
           kind={modal.kind}
+          defaultDate={modal.defaultDate}
           onClose={() => setModal(null)}
           onDone={() => { setModal(null); fetchPunches(); }}
         />
