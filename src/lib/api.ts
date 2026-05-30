@@ -14,7 +14,7 @@ export interface ApiError {
   message: string;
 }
 
-async function invoke<T>(name: string, body: unknown, method: 'POST' | 'GET' = 'POST', searchParams?: Record<string, string>): Promise<T> {
+async function invoke<T>(name: string, body: unknown, method: 'POST' | 'GET' = 'POST', searchParams?: Record<string, string>, responseType: 'text' | 'json' = 'text'): Promise<T> {
   if (method === 'POST') {
     const { data, error } = await supabase.functions.invoke<T>(name, { body });
     if (error) {
@@ -48,8 +48,14 @@ async function invoke<T>(name: string, body: unknown, method: 'POST' | 'GET' = '
       const json = await res.json().catch(() => ({})) as { code?: string; error?: string; message?: string };
       throw { status: res.status, code: json.code ?? json.error ?? 'UNKNOWN', message: json.message ?? res.statusText } as ApiError;
     }
-    return await res.text() as unknown as T;
+    return (responseType === 'json' ? await res.json() : await res.text()) as T;
   }
+}
+
+export interface MonthExport {
+  month: string;
+  punches: { employee_id: string; kind: 'in' | 'out'; effective_time: string; email: string; full_name: string }[];
+  totals: { employee_id: string; email: string; worked_total: string | null }[];
 }
 
 export function punchIn(args: PunchInArgs) {
@@ -77,6 +83,10 @@ export function rejectEdit(request_id: string, note: string) {
 
 export function exportMonthCsv(month: string) {
   return invoke<string>('export-month', null, 'GET', { month });
+}
+
+export function exportMonthData(month: string) {
+  return invoke<MonthExport>('export-month', null, 'GET', { month, format: 'json' }, 'json');
 }
 
 export function adminCorrectPunch(args: {

@@ -54,6 +54,8 @@ Deno.serve(async (req) => {
     const url = new URL(req.url);
     const month = url.searchParams.get('month');
     if (!month || !/^\d{4}-\d{2}$/.test(month)) throw new HttpError(400, 'BAD_MONTH');
+    const format = url.searchParams.get('format') ?? 'csv';
+    if (format !== 'csv' && format !== 'json') throw new HttpError(400, 'BAD_FORMAT');
 
     const [y, m] = month.split('-').map(Number);
     const start = new Date(Date.UTC(y, m - 1, 1, 0, 0, 0));   // start of month UTC
@@ -75,6 +77,45 @@ Deno.serve(async (req) => {
     const { data: rows, error } = await query;
     if (error) throw error;
 
+    let totalsQuery = admin
+      .from('monthly_hours')
+      .select('employee_id, month, worked_total, employees!inner(email)')
+      .gte('month', start.toISOString().slice(0, 10))
+      .lt('month', end.toISOString().slice(0, 10));
+    if (user.role !== 'admin' && user.role !== 'it') {
+      totalsQuery = totalsQuery.eq('employee_id', user.id);
+    }
+    const { data: totals } = await totalsQuery;
+
+    // JSON: flat structured data; the frontend builds the compliance PDF from it.
+    if (format === 'json') {
+      const body = {
+        month,
+        punches: (rows ?? []).map((r) => {
+          const emp = (r as any).employees;
+          return {
+            employee_id: r.employee_id,
+            kind: r.kind,
+            effective_time: r.effective_time,
+            email: emp.email,
+            full_name: emp.full_name,
+          };
+        }),
+        totals: (totals ?? []).map((t) => ({
+          employee_id: t.employee_id,
+          email: (t as any).employees.email,
+          worked_total: t.worked_total ?? null,
+        })),
+      };
+      return new Response(JSON.stringify(body), {
+        status: 200,
+        headers: {
+          'Content-Type': 'application/json; charset=utf-8',
+          'Access-Control-Allow-Origin': '*',
+        },
+      });
+    }
+
     const lines: string[] = [
       ['employee_email', 'employee_name', 'work_date', 'kind', 'time_local', 'time_utc'].join(','),
     ];
@@ -91,18 +132,7 @@ Deno.serve(async (req) => {
         t.toISOString(),
       ].join(','));
     }
-    // Per-punch rows already populated in `lines`
-    // Now append totals per employee from monthly_hours view
-    let totalsQuery = admin
-      .from('monthly_hours')
-      .select('employee_id, month, worked_total, employees!inner(email)')
-      .gte('month', start.toISOString().slice(0, 10))
-      .lt('month', end.toISOString().slice(0, 10));
-    if (user.role !== 'admin' && user.role !== 'it') {
-      totalsQuery = totalsQuery.eq('employee_id', user.id);
-    }
-    const { data: totals } = await totalsQuery;
-
+    // Append per-employee totals from monthly_hours.
     lines.push('');
     lines.push(['employee_email', 'worked_total_hours'].join(','));
     for (const t of totals ?? []) {
