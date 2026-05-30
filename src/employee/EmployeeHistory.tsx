@@ -109,7 +109,7 @@ function ShiftRow({
             </button>
           ) : (
             <button type="button" onClick={() => onAdd('in')} className={addChipBase} title={t('editRequest.requestAddTitle')}>
-              ⚠️ {t('admin.shifts.strayOut')}
+              ❓ {t('admin.shifts.strayOut')}
             </button>
           )}
           <span className="text-slate-400 px-1">–</span>
@@ -119,7 +119,7 @@ function ShiftRow({
             </button>
           ) : (
             <button type="button" onClick={() => onAdd('out')} className={addChipBase} title={t('editRequest.requestAddTitle')}>
-              ⚠️ {t('admin.shifts.openShift')}
+              ❓ {t('admin.shifts.openShift')}
             </button>
           )}
 

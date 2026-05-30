@@ -209,7 +209,7 @@ export function EmployeeHome() {
                             </span>
                           ) : (
                             <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-amber-100 text-amber-800 text-sm font-medium">
-                              ⚠️ {t('admin.shifts.strayOut')}
+                              ❓ {t('admin.shifts.strayOut')}
                             </span>
                           )}
                           <span className="text-slate-400 px-1">–</span>
@@ -219,7 +219,7 @@ export function EmployeeHome() {
                             </span>
                           ) : (
                             <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-amber-100 text-amber-800 text-sm font-medium">
-                              ⚠️ {t('admin.shifts.openShift')}
+                              ❓ {t('admin.shifts.openShift')}
                             </span>
                           )}
                         </div>

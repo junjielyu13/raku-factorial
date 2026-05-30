@@ -22,13 +22,13 @@ type RangeFilter = 'day' | 'last7' | 'last30' | 'week' | 'custom';
 const WEEKLY_TARGET_HOURS = 41;
 const WEEKLY_TARGET_MS = WEEKLY_TARGET_HOURS * 60 * 60 * 1000;
 
-// Renders " / 41 小时" after a worked time, with a ⚠️ when over the weekly target.
+// Renders " / 41 小时" after a worked time, with a 📈 when over the weekly target.
 function WeeklyTargetSuffix({ ms, t }: { ms: number; t: (key: string, vars?: Record<string, string | number>) => string }) {
   const over = ms > WEEKLY_TARGET_MS;
   return (
     <span className={`ml-1 font-medium ${over ? 'text-rose-600' : 'text-emerald-600'}`}>
       {' '}{t('admin.stats.targetSuffix', { h: WEEKLY_TARGET_HOURS })}
-      {over && <span title={t('admin.stats.overTarget')}> ⚠️</span>}
+      {over && <span title={t('admin.stats.overTarget')}> 📈</span>}
     </span>
   );
 }
@@ -257,7 +257,7 @@ function PunchBadges({
 }
 
 // Per-day absence badge: roster members who didn't punch that day. Collapsed
-// behind a single ⚠️ N icon; clicking expands the list of names.
+// behind a single 🚫 N icon; clicking expands the list of names.
 function AbsenceWarn({
   names,
   t,
@@ -806,7 +806,7 @@ export function AdminDashboard() {
                     onClick={() => setModal({ mode: 'add-missing', kind: 'in', employeeId: s.out!.employee_id, employeeName: s.out!.employee.full_name })}
                     className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-amber-100 text-amber-800 text-sm font-medium hover:bg-amber-200 transition"
                   >
-                    ⚠️ {t('admin.shifts.strayOut')}
+                    ❓ {t('admin.shifts.strayOut')}
                   </button>
                 )}
                 <span className="text-slate-400 self-center px-1">–</span>
@@ -818,7 +818,7 @@ export function AdminDashboard() {
                     onClick={() => setModal({ mode: 'add-missing', kind: 'out', employeeId: s.in!.employee_id, employeeName: s.in!.employee.full_name })}
                     className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-amber-100 text-amber-800 text-sm font-medium hover:bg-amber-200 transition"
                   >
-                    ⚠️ {t('admin.shifts.openShift')}
+                    ❓ {t('admin.shifts.openShift')}
                   </button>
                 )}
                 <div className="justify-self-start">
