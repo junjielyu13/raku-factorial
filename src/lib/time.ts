@@ -87,6 +87,32 @@ export function madridDayRange(dateKey: string): { start: string; end: string } 
   return { start: start.toISOString(), end: end.toISOString() };
 }
 
+/** Add n days to a YYYY-MM-DD key (UTC-noon arithmetic, calendar-safe). */
+export function addDaysKey(dateKey: string, n: number): string {
+  const [y, m, d] = dateKey.split('-').map(Number);
+  const dt = new Date(Date.UTC(y, m - 1, d, 12));
+  dt.setUTCDate(dt.getUTCDate() + n);
+  const pad = (x: number) => String(x).padStart(2, '0');
+  return `${dt.getUTCFullYear()}-${pad(dt.getUTCMonth() + 1)}-${pad(dt.getUTCDate())}`;
+}
+
+/** Monday (ISO week start) as YYYY-MM-DD of the week containing dateKey. */
+export function madridWeekStartKey(dateKey: string): string {
+  const [y, m, d] = dateKey.split('-').map(Number);
+  const dow = new Date(Date.UTC(y, m - 1, d, 12)).getUTCDay(); // 0=Sun..6=Sat
+  const offsetToMonday = (dow + 6) % 7;
+  return addDaysKey(dateKey, -offsetToMonday);
+}
+
+/** [start, end) ISO instants for the Madrid week (Mon–Sun) containing dateKey. */
+export function madridWeekRange(dateKey: string): { start: string; end: string; startKey: string; endKey: string } {
+  const startKey = madridWeekStartKey(dateKey);
+  const endKey = addDaysKey(startKey, 6);
+  const { start } = madridDayRange(startKey);
+  const { end } = madridDayRange(endKey);
+  return { start, end, startKey, endKey };
+}
+
 /**
  * Returns the ISO timestamps for [start, end) of "today" in Europe/Madrid,
  * correctly handling CET/CEST DST.

@@ -3,7 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../auth/useAuth';
-import { formatDate, formatWeekday, formatTime, madridDayKeyOf, madridDayRange, madridTodayKey } from '../lib/time';
+import { formatDate, formatWeekday, formatTime, madridDayKeyOf, madridDayRange, madridTodayKey, madridWeekStartKey, madridWeekRange, addDaysKey } from '../lib/time';
 import { pairShifts, msToHm } from '../lib/worked';
 import type { ShiftPair } from '../lib/worked';
 import { useTranslation } from '../i18n/LanguageContext';
@@ -11,7 +11,7 @@ import type { EffectivePunch } from '../lib/types';
 import { EditRequestModal } from '../components/EditRequestModal';
 import type { EditTarget } from '../components/EditRequestModal';
 
-type Filter = 'last7' | 'last30' | 'day';
+type Filter = 'last7' | 'last30' | 'week' | 'day';
 
 const PAGE_SIZES = [10, 50, 100] as const;
 type PageSize = typeof PAGE_SIZES[number];
@@ -160,6 +160,7 @@ export function EmployeeHistory() {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<Filter>('last7');
   const [selectedDate, setSelectedDate] = useState<string>(madridTodayKey());
+  const [selectedWeekStart, setSelectedWeekStart] = useState<string>(() => madridWeekStartKey(madridTodayKey()));
   const [pageSize, setPageSize] = useState<PageSize>(10);
   const [page, setPage] = useState(0);
   type ModalState =
@@ -179,6 +180,9 @@ export function EmployeeHistory() {
     if (filter === 'day') {
       const { start, end } = madridDayRange(selectedDate);
       q = q.gte('effective_time', start).lt('effective_time', end);
+    } else if (filter === 'week') {
+      const { start, end } = madridWeekRange(selectedWeekStart);
+      q = q.gte('effective_time', start).lt('effective_time', end);
     } else {
       const days = filter === 'last7' ? 7 : 30;
       const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
@@ -193,12 +197,12 @@ export function EmployeeHistory() {
       .eq('employee_id', profile.id)
       .eq('status', 'pending')
       .then(({ data }) => setPending((data as PendingReq[]) ?? []));
-  }, [profile, filter, selectedDate]);
+  }, [profile, filter, selectedDate, selectedWeekStart]);
 
   useEffect(() => { load(); }, [load]);
 
-  // Reset to first page when filter, date, or page size changes.
-  useEffect(() => { setPage(0); }, [filter, selectedDate, pageSize]);
+  // Reset to first page when filter, date, week, or page size changes.
+  useEffect(() => { setPage(0); }, [filter, selectedDate, selectedWeekStart, pageSize]);
 
   const todayKey = madridTodayKey();
   const shifts = useMemo(() => pairShifts(rows), [rows]);
@@ -252,6 +256,11 @@ export function EmployeeHistory() {
     return Array.from(m.entries());
   }, [pagedShifts]);
 
+  // Week-picker derived values (cheap; computed each render).
+  const currentWeekStart = madridWeekStartKey(todayKey);
+  const weekRange = madridWeekRange(selectedWeekStart);
+  const weekLabel = `${formatDate(`${weekRange.startKey}T12:00:00Z`)} – ${formatDate(`${weekRange.endKey}T12:00:00Z`)}`;
+
   return (
     <div className="min-h-full max-w-md mx-auto px-4 py-6 space-y-4">
       <Link to="/" className="inline-block text-sm text-emerald-700 hover:underline">{t('common.back')}</Link>
@@ -268,8 +277,8 @@ export function EmployeeHistory() {
       </div>
 
       <div className="space-y-3">
-        <div className="grid grid-cols-3 gap-2 rounded-lg bg-slate-100 p-1">
-          {(['last7', 'last30', 'day'] as const).map(f => (
+        <div className="grid grid-cols-2 gap-2 rounded-lg bg-slate-100 p-1">
+          {(['last7', 'last30', 'week', 'day'] as const).map(f => (
             <button
               key={f}
               type="button"
@@ -296,6 +305,30 @@ export function EmployeeHistory() {
             />
           </label>
         )}
+        {filter === 'week' && (
+          <div className="flex items-center justify-between gap-2 rounded-lg bg-white ring-1 ring-slate-200 px-2 py-1.5">
+            <button
+              type="button"
+              onClick={() => setSelectedWeekStart(w => addDaysKey(w, -7))}
+              className="h-8 w-8 inline-flex items-center justify-center rounded-md text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition"
+              title={t('history.weekPrev')}
+              aria-label={t('history.weekPrev')}
+            >
+              ‹
+            </button>
+            <span className="text-sm font-medium text-slate-800 tabular-nums">{weekLabel}</span>
+            <button
+              type="button"
+              onClick={() => setSelectedWeekStart(w => addDaysKey(w, 7))}
+              disabled={selectedWeekStart >= currentWeekStart}
+              className="h-8 w-8 inline-flex items-center justify-center rounded-md text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition disabled:opacity-30 disabled:cursor-not-allowed"
+              title={t('history.weekNext')}
+              aria-label={t('history.weekNext')}
+            >
+              ›
+            </button>
+          </div>
+        )}
       </div>
 
       {loading ? (
@@ -306,7 +339,7 @@ export function EmployeeHistory() {
         <div className="space-y-3">
           {filter !== 'day' && (
             <div className="app-card px-4 py-3 flex items-center justify-between">
-              <span className="text-sm text-slate-600">{t(`history.filter.${filter}`)}</span>
+              <span className="text-sm text-slate-600">{filter === 'week' ? weekLabel : t(`history.filter.${filter}`)}</span>
               <span className="text-sm font-semibold text-slate-900 tabular-nums">
                 {t('history.rangeTotal', { h: rangeTotal.h, m: rangeTotal.m })}
               </span>

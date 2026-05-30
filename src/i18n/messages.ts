@@ -65,9 +65,12 @@ interface Messages {
     filter: {
       last7: string;
       last30: string;
+      week: string;
       day: string;
     };
     pickDate: string;
+    weekPrev: string;
+    weekNext: string;
     total: string;       // uses {h}, {m}
     rangeTotal: string;  // uses {h}, {m}
     pendingToggle: string;
@@ -270,8 +273,10 @@ export const MESSAGES: Record<Lang, Messages> = {
     history: {
       title: '打卡历史',
       noRecords: '暂无记录',
-      filter: { last7: '近 7 天', last30: '近 30 天', day: '某一天' },
+      filter: { last7: '近 7 天', last30: '近 30 天', week: '某一周', day: '某一天' },
       pickDate: '选择日期',
+      weekPrev: '上一周',
+      weekNext: '下一周',
       total: '共 {h} 小时 {m} 分',
       rangeTotal: '合计 {h} 小时 {m} 分',
       pendingToggle: '查看待审批申请',
@@ -494,8 +499,10 @@ export const MESSAGES: Record<Lang, Messages> = {
     history: {
       title: 'History',
       noRecords: 'No records',
-      filter: { last7: 'Last 7 days', last30: 'Last 30 days', day: 'Pick a day' },
+      filter: { last7: 'Last 7 days', last30: 'Last 30 days', week: 'Pick a week', day: 'Pick a day' },
       pickDate: 'Pick date',
+      weekPrev: 'Previous week',
+      weekNext: 'Next week',
       total: 'Total {h}h {m}m',
       rangeTotal: 'Total {h}h {m}m',
       pendingToggle: 'Show pending request',
@@ -718,8 +725,10 @@ export const MESSAGES: Record<Lang, Messages> = {
     history: {
       title: 'Historial',
       noRecords: 'Sin registros',
-      filter: { last7: 'Últimos 7 días', last30: 'Últimos 30 días', day: 'Un día' },
+      filter: { last7: 'Últimos 7 días', last30: 'Últimos 30 días', week: 'Una semana', day: 'Un día' },
       pickDate: 'Elegir fecha',
+      weekPrev: 'Semana anterior',
+      weekNext: 'Semana siguiente',
       total: 'Total {h} h {m} min',
       rangeTotal: 'Total {h} h {m} min',
       pendingToggle: 'Ver solicitud pendiente',

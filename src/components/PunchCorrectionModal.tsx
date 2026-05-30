@@ -4,6 +4,7 @@ import type { FormEvent } from 'react';
 import { adminCorrectPunch } from '../lib/api';
 import type { ApiError } from '../lib/api';
 import { useTranslation } from '../i18n/LanguageContext';
+import { MESSAGES } from '../i18n/messages';
 import { formatDateTime } from '../lib/time';
 
 export interface CorrectionTarget {
@@ -65,7 +66,8 @@ function dateKeyToLocalInput(dateKey: string): string {
 }
 
 export function PunchCorrectionModal(props: Props) {
-  const { t } = useTranslation();
+  const { t, lang } = useTranslation();
+  const commonReasons = MESSAGES[lang].editRequest.commonReasons;
   const lockedEmployeeId = props.mode === 'add' ? props.lockedEmployeeId : undefined;
   const [employeeId, setEmployeeId] = useState(lockedEmployeeId ?? '');
   const initialKind =
@@ -186,11 +188,28 @@ export function PunchCorrectionModal(props: Props) {
             </>
           )}
 
-          <label className="block space-y-1.5">
+          <div className="space-y-1.5">
             <span className="text-sm font-medium text-slate-700">{t('admin.correct.reasonLabel')}</span>
+            <div className="flex flex-wrap gap-2">
+              <span className="w-full text-xs text-slate-500">{t('editRequest.commonReasonsHint')}</span>
+              {commonReasons.map(r => (
+                <button
+                  type="button"
+                  key={r}
+                  onClick={() => setReason(r)}
+                  className={`rounded-full px-3 py-1 text-sm ring-1 transition ${
+                    reason === r
+                      ? 'bg-emerald-600 text-white ring-emerald-600'
+                      : 'bg-white text-slate-700 ring-slate-300 hover:bg-slate-50'
+                  }`}
+                >
+                  {r}
+                </button>
+              ))}
+            </div>
             <textarea required value={reason} onChange={e => setReason(e.target.value)} rows={3}
               placeholder={t('admin.correct.reasonPlaceholder')} className="app-input resize-none" />
-          </label>
+          </div>
 
           {err && (
             <div className="rounded-lg bg-rose-50 ring-1 ring-rose-200 px-3 py-2 text-sm text-rose-700">{err}</div>
