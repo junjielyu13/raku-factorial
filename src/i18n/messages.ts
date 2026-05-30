@@ -193,6 +193,7 @@ interface Messages {
       delete: string;
       addPunch: string;
       addForDay: string;
+      addForEmployee: string;
       modalAddTitle: string;
       modalModifyTitle: string;
       modalDeleteTitle: string;
@@ -423,6 +424,7 @@ export const MESSAGES: Record<Lang, Messages> = {
         delete: '删除',
         addPunch: '补登打卡',
         addForDay: '为该日补登打卡',
+        addForEmployee: '为该员工补登打卡',
         modalAddTitle: '补登打卡',
         modalModifyTitle: '修改打卡',
         modalDeleteTitle: '删除打卡',
@@ -661,6 +663,7 @@ export const MESSAGES: Record<Lang, Messages> = {
         delete: 'Delete',
         addPunch: 'Add punch',
         addForDay: 'Add punch for this day',
+        addForEmployee: 'Add punch for this employee',
         modalAddTitle: 'Add punch',
         modalModifyTitle: 'Modify punch',
         modalDeleteTitle: 'Delete punch',
@@ -899,6 +902,7 @@ export const MESSAGES: Record<Lang, Messages> = {
         delete: 'Eliminar',
         addPunch: 'Añadir fichaje',
         addForDay: 'Añadir fichaje para este día',
+        addForEmployee: 'Añadir fichaje para este empleado',
         modalAddTitle: 'Añadir fichaje',
         modalModifyTitle: 'Modificar fichaje',
         modalDeleteTitle: 'Eliminar fichaje',

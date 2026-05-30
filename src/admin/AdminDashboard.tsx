@@ -966,7 +966,22 @@ export function AdminDashboard() {
                       <div key={empId} className={empIdx > 0 ? 'border-t border-slate-200' : ''}>
                         {!isSingleEmployee && (
                           <div className="px-4 py-2 flex items-center justify-between gap-3 text-xs bg-slate-50/30">
-                            <span className="font-medium text-slate-700">{name}</span>
+                            <div className="flex items-center gap-0.5">
+                              <span className="font-medium text-slate-700">{name}</span>
+                              {empShifts.length < 2 && (
+                                <button
+                                  type="button"
+                                  onClick={() => setModal({ mode: 'add', date, employeeId: empId, employeeName: name })}
+                                  className="h-5 w-5 inline-flex items-center justify-center rounded-md text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 transition"
+                                  title={t('admin.correct.addForEmployee')}
+                                  aria-label={t('admin.correct.addForEmployee')}
+                                >
+                                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-3.5 w-3.5" aria-hidden="true">
+                                    <path d="M12 5v14M5 12h14" />
+                                  </svg>
+                                </button>
+                              )}
+                            </div>
                             <span className="text-slate-500 font-mono tabular-nums">{t('admin.stats.hours', { h: empHm.h, m: empHm.m })}</span>
                           </div>
                         )}
