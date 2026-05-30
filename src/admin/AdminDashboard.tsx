@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
-import { formatTime, formatDate, madridDayRange, madridDayKeyOf, madridTodayKey, madridMinutesOfDay } from '../lib/time';
+import { formatTime, formatDate, formatWeekday, madridDayRange, madridDayKeyOf, madridTodayKey, madridMinutesOfDay } from '../lib/time';
 import { workedMsForDay, msToHm, pairShifts } from '../lib/worked';
 import type { ShiftPair } from '../lib/worked';
 import { useTranslation } from '../i18n/LanguageContext';
@@ -710,7 +710,10 @@ export function AdminDashboard() {
               return (
                 <section key={date} className="app-card overflow-hidden">
                   <header className="px-4 py-3 border-b border-slate-100 flex items-center justify-between gap-3 bg-slate-50/60">
-                    <div className="text-sm font-semibold text-slate-900">{formatDate(dayAnchor.effective_time)}</div>
+                    <div className="text-sm font-semibold text-slate-900">
+                      {formatDate(dayAnchor.effective_time)}
+                      <span className="ml-2 font-normal text-slate-500">{formatWeekday(dayAnchor.effective_time)}</span>
+                    </div>
                     <div className="flex items-center gap-1.5 text-sm text-slate-700">
                       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4 text-slate-500" aria-hidden="true">
                         <circle cx="12" cy="13" r="8" />
