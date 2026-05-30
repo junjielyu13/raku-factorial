@@ -118,9 +118,9 @@ describe('periodFileSuffix', () => {
 
 describe('buildDocDefinition', () => {
   const model = [
-    { employeeId: 'a', fullName: 'Ana', dni: '___', totalHoras: '4:27',
+    { employeeId: 'a', fullName: 'Ana', email: 'a@x.es', dni: '___', totalHoras: '4:27', totalMs: 16_020_000,
       rows: [{ date: '01/05/26', weekday: 'vie', entrada: '12:31', salida: '16:58', horas: '4:27' }] },
-    { employeeId: 'b', fullName: 'Bruno', dni: '___', totalHoras: '0:00', rows: [] },
+    { employeeId: 'b', fullName: 'Bruno', email: 'b@x.es', dni: '___', totalHoras: '0:00', totalMs: 0, rows: [] },
   ];
   const company = { name: 'Mi Empresa SL', cif: 'B12345678' };
   const month: Period = { scope: 'month', month: '2026-05' };

@@ -1,9 +1,10 @@
 // src/admin/AdminExport.tsx
 import { useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { exportCsv, exportData } from '../lib/api';
+import { exportData } from '../lib/api';
 import type { ApiError } from '../lib/api';
-import { downloadMonthlyPdf, periodFileSuffix, type Period } from '../lib/monthlyPdf';
+import { downloadMonthlyPdf, type Period } from '../lib/monthlyPdf';
+import { downloadExcel } from '../lib/excelExport';
 import { currentMonthKey } from '../lib/time';
 import { useTranslation } from '../i18n/LanguageContext';
 
@@ -32,16 +33,22 @@ export function AdminExport() {
     : scope === 'year' ? { scope: 'year', year }
     : { scope: 'month', month };
 
-  async function go() {
+  async function goExcel() {
     setBusy(true); setErr(null);
     try {
-      const csv = await exportCsv(period);
-      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
-      const url  = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url; a.download = `raku-sant-cugat-punches-${periodFileSuffix(period)}.csv`;
-      document.body.appendChild(a); a.click();
-      document.body.removeChild(a); URL.revokeObjectURL(url);
+      const data = await exportData(period);
+      await downloadExcel(data.punches, period, {
+        summarySheet: t('admin.export.excel.summarySheet'),
+        detailSheet: t('admin.export.excel.detailSheet'),
+        colEmployee: t('admin.export.excel.colEmployee'),
+        colEmail: t('admin.export.excel.colEmail'),
+        colTotalHours: t('admin.export.excel.colTotalHours'),
+        colDate: t('admin.export.excel.colDate'),
+        colWeekday: t('admin.export.excel.colWeekday'),
+        colIn: t('admin.export.excel.colIn'),
+        colOut: t('admin.export.excel.colOut'),
+        colHours: t('admin.export.excel.colHours'),
+      });
     } catch (e: unknown) {
       setErr(t('admin.export.failed', { code: (e as ApiError).code }));
     } finally {
@@ -102,8 +109,8 @@ export function AdminExport() {
           </label>
         )}
 
-        <button onClick={go} disabled={busy} className="app-btn-primary">
-          {busy ? t('admin.export.generating') : t('admin.export.download')}
+        <button onClick={goExcel} disabled={busy} className="app-btn-primary">
+          {busy ? t('admin.export.generating') : t('admin.export.downloadExcel')}
         </button>
         <button onClick={goPdf} disabled={busy} className="app-btn-secondary">
           {busy ? t('admin.export.generating') : t('admin.export.downloadPdf')}

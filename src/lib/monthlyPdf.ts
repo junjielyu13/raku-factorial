@@ -27,9 +27,11 @@ export interface ShiftRow {
 export interface EmployeeReport {
   employeeId: string;
   fullName: string;
+  email: string;
   dni: string;
   rows: ShiftRow[];
-  totalHoras: string;
+  totalHoras: string;  // H:MM
+  totalMs: number;     // worked milliseconds (numeric, for Excel/sorting)
 }
 
 const DASH = '—';
@@ -92,12 +94,15 @@ export function buildReportModel(punches: PunchRow[], dni: Record<string, string
         horas: complete ? formatHm(new Date(s.out!.effective_time).getTime() - new Date(s.in!.effective_time).getTime()) : DASH,
       };
     });
+    const totalMs = workedMsForDay(empPunches, null);
     reports.push({
       employeeId,
       fullName: full_name,
+      email,
       dni: dni[email] ?? '___',
       rows,
-      totalHoras: formatHm(workedMsForDay(empPunches, null)),
+      totalHoras: formatHm(totalMs),
+      totalMs,
     });
   }
 

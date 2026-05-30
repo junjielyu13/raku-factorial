@@ -88,10 +88,6 @@ function periodParams(p: Period): Record<string, string> {
   return { scope: 'all' };
 }
 
-export function exportCsv(period: Period) {
-  return invoke<string>('export-month', null, 'GET', periodParams(period));
-}
-
 export function exportData(period: Period) {
   return invoke<MonthExport>('export-month', null, 'GET', { ...periodParams(period), format: 'json' }, 'json');
 }

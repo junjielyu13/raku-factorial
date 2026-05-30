@@ -188,10 +188,22 @@ interface Messages {
       scopeAll: string;
       monthLabel: string;
       yearLabel: string;
-      download: string;
+      downloadExcel: string;
       downloadPdf: string;
       generating: string;
       failed: string;        // uses {code}
+      excel: {
+        summarySheet: string;
+        detailSheet: string;
+        colEmployee: string;
+        colEmail: string;
+        colTotalHours: string;
+        colDate: string;
+        colWeekday: string;
+        colIn: string;
+        colOut: string;
+        colHours: string;
+      };
     };
     correct: {
       modify: string;
@@ -424,10 +436,22 @@ export const MESSAGES: Record<Lang, Messages> = {
         scopeAll: '全部',
         monthLabel: '月份 (YYYY-MM)',
         yearLabel: '年份',
-        download: '下载 CSV',
+        downloadExcel: '下载 Excel',
         downloadPdf: '下载 PDF',
         generating: '生成中…',
         failed: '导出失败：{code}',
+        excel: {
+          summarySheet: '汇总',
+          detailSheet: '明细',
+          colEmployee: '员工',
+          colEmail: '邮箱',
+          colTotalHours: '总工时(小时)',
+          colDate: '日期',
+          colWeekday: '星期',
+          colIn: '上班',
+          colOut: '下班',
+          colHours: '工时',
+        },
       },
       correct: {
         modify: '修改',
@@ -668,10 +692,22 @@ export const MESSAGES: Record<Lang, Messages> = {
         scopeAll: 'All',
         monthLabel: 'Month (YYYY-MM)',
         yearLabel: 'Year',
-        download: 'Download CSV',
+        downloadExcel: 'Download Excel',
         downloadPdf: 'Download PDF',
         generating: 'Generating…',
         failed: 'Export failed: {code}',
+        excel: {
+          summarySheet: 'Summary',
+          detailSheet: 'Detail',
+          colEmployee: 'Employee',
+          colEmail: 'Email',
+          colTotalHours: 'Total hours',
+          colDate: 'Date',
+          colWeekday: 'Day',
+          colIn: 'In',
+          colOut: 'Out',
+          colHours: 'Hours',
+        },
       },
       correct: {
         modify: 'Modify',
@@ -912,10 +948,22 @@ export const MESSAGES: Record<Lang, Messages> = {
         scopeAll: 'Todo',
         monthLabel: 'Mes (AAAA-MM)',
         yearLabel: 'Año',
-        download: 'Descargar CSV',
+        downloadExcel: 'Descargar Excel',
         downloadPdf: 'Descargar PDF',
         generating: 'Generando…',
         failed: 'Exportación fallida: {code}',
+        excel: {
+          summarySheet: 'Resumen',
+          detailSheet: 'Detalle',
+          colEmployee: 'Empleado',
+          colEmail: 'Correo',
+          colTotalHours: 'Horas totales',
+          colDate: 'Fecha',
+          colWeekday: 'Día',
+          colIn: 'Entrada',
+          colOut: 'Salida',
+          colHours: 'Horas',
+        },
       },
       correct: {
         modify: 'Modificar',
