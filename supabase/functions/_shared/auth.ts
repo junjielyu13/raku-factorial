@@ -4,7 +4,7 @@ import { createClient, SupabaseClient } from "https://esm.sh/@supabase/supabase-
 export interface AuthedUser {
   id: string;
   email: string;
-  role: 'employee' | 'admin';
+  role: 'employee' | 'admin' | 'it';
 }
 
 const SUPABASE_URL          = Deno.env.get('SUPABASE_URL')!;
@@ -41,8 +41,10 @@ export async function authenticate(req: Request): Promise<AuthedUser> {
   return { id: emp.id, email: emp.email, role: emp.role };
 }
 
+// 'it' holds the same privileges as 'admin' (it just isn't tracked for
+// attendance), so both pass the admin gate.
 export function requireAdmin(user: AuthedUser): void {
-  if (user.role !== 'admin') throw new HttpError(403, 'NOT_ADMIN');
+  if (user.role !== 'admin' && user.role !== 'it') throw new HttpError(403, 'NOT_ADMIN');
 }
 
 export class HttpError extends Error {
