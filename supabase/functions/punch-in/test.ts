@@ -119,12 +119,63 @@ Deno.test({ name: "punch-in: two consecutive 'in' → 409 INVALID_SEQUENCE", san
   async fn() {
     await cleanup();
     const { id, jwt } = await makeEmployee('seq@test.local');
-    // Backdate first punch so 60s window doesn't trip
-    await admin.from('punches').insert({
-      employee_id: id, kind: 'in',
-      recorded_at: new Date(Date.now() - 5*60*1000).toISOString(),
+    // Backdate first punch so 60s window doesn't trip. Mirror create_punch:
+    // a real punch always lands in BOTH punches and effective_punches (the
+    // latter is what the sequence guard reads).
+    const backdated = new Date(Date.now() - 5*60*1000).toISOString();
+    const { data: p } = await admin.from('punches').insert({
+      employee_id: id, kind: 'in', recorded_at: backdated,
       latitude: 41.478107, longitude: 2.084087,
+    }).select('id').single();
+    await admin.from('effective_punches').insert({
+      employee_id: id, kind: 'in', effective_time: backdated, source_punch_id: p!.id,
     });
+    const res = await callPunchIn(jwt, { kind: 'in', latitude: 41.478107, longitude: 2.084087 });
+    assertEquals(res.status, 409);
+    assertEquals((await res.json()).error, 'INVALID_SEQUENCE');
+    await cleanup();
+  }});
+
+Deno.test({ name: "punch-in: clock OUT works after admin backfills an 'in' (effective_punches is source of truth)", sanitizeResources: false, sanitizeOps: false,
+  async fn() {
+    await cleanup();
+    const { id, jwt } = await makeEmployee('admin-backfill@test.local');
+    // Admin backfills an 'in' punch. admin_correct_punch writes ONLY to
+    // effective_punches (source_request_id), never to the punches table.
+    // Backdate it so the 60s "too soon" window can't interfere.
+    const inTime = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+    const { error: addErr } = await admin.rpc('admin_correct_punch', {
+      p_admin_id:            id,   // any valid employee id satisfies the FK
+      p_action:              'add',
+      p_target_effective_id: null,
+      p_employee_id:         id,
+      p_kind:                'in',
+      p_time:                inTime,
+      p_reason:              'admin backfill',
+    });
+    assert(!addErr, `admin_correct_punch add failed: ${addErr?.message}`);
+    // Employee's effective state is now "in", so the UI shows a clock-OUT
+    // button. The out punch must succeed.
+    const res = await callPunchIn(jwt, { kind: 'out', latitude: 41.478107, longitude: 2.084087 });
+    assertEquals(res.status, 200);
+    const { data: effs } = await admin.from('effective_punches')
+      .select('*').eq('employee_id', id).is('superseded_at', null)
+      .order('effective_time', { ascending: true });
+    assertEquals(effs?.map((e) => e.kind), ['in', 'out']);
+    await cleanup();
+  }});
+
+Deno.test({ name: "punch-in: clock IN rejected after admin backfills an 'in' (already clocked in)", sanitizeResources: false, sanitizeOps: false,
+  async fn() {
+    await cleanup();
+    const { id, jwt } = await makeEmployee('admin-backfill-seq@test.local');
+    const inTime = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+    const { error: addErr } = await admin.rpc('admin_correct_punch', {
+      p_admin_id: id, p_action: 'add', p_target_effective_id: null,
+      p_employee_id: id, p_kind: 'in', p_time: inTime, p_reason: 'admin backfill',
+    });
+    assert(!addErr, `admin_correct_punch add failed: ${addErr?.message}`);
+    // Effective state is "in" → a second 'in' must be rejected as out-of-sequence.
     const res = await callPunchIn(jwt, { kind: 'in', latitude: 41.478107, longitude: 2.084087 });
     assertEquals(res.status, 409);
     assertEquals((await res.json()).error, 'INVALID_SEQUENCE');
