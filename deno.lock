@@ -84,6 +84,7 @@
         "npm:eslint-plugin-react-hooks@^7.1.1",
         "npm:eslint-plugin-react-refresh@~0.5.2",
         "npm:eslint@^10.3.0",
+        "npm:exceljs@^4.4.0",
         "npm:globals@^17.6.0",
         "npm:pdfmake@~0.2.23",
         "npm:postcss@^8.5.14",
