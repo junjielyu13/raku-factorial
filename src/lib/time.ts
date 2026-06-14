@@ -75,10 +75,13 @@ export function madridDayKeyOf(iso: string | Date): string {
   return ['year', 'month', 'day'].map(t => parts.find(p => p.type === t)!.value).join('-');
 }
 
-/** [start, end) ISO instants for a Europe/Madrid calendar day given as YYYY-MM-DD. */
-export function madridDayRange(dateKey: string): { start: string; end: string } {
+/**
+ * Madrid UTC-offset (ms) in effect on a civil date YYYY-MM-DD. Probed at 12:00
+ * UTC, safely past any 02→03 DST transition, so it's the offset that applies to
+ * normal daytime wall-clock times on that date.
+ */
+function madridOffsetMs(dateKey: string): number {
   const [y, m, d] = dateKey.split('-').map(Number);
-  // Use 12:00 UTC on that civil date to read the Madrid offset (safely past any 02→03 DST transition).
   const probeUtc = Date.UTC(y, m - 1, d, 12, 0, 0);
   const fmt = new Intl.DateTimeFormat('sv-SE', {
     timeZone: 'Europe/Madrid',
@@ -88,10 +91,34 @@ export function madridDayRange(dateKey: string): { start: string; end: string } 
   const parts = fmt.formatToParts(new Date(probeUtc));
   const get = (t: string) => +parts.find(p => p.type === t)!.value;
   const asIfUtc = Date.UTC(get('year'), get('month') - 1, get('day'), get('hour'), get('minute'), get('second'));
-  const offsetMs = asIfUtc - probeUtc;
+  return asIfUtc - probeUtc;
+}
+
+/** [start, end) ISO instants for a Europe/Madrid calendar day given as YYYY-MM-DD. */
+export function madridDayRange(dateKey: string): { start: string; end: string } {
+  const [y, m, d] = dateKey.split('-').map(Number);
+  const offsetMs = madridOffsetMs(dateKey);
   const start = new Date(Date.UTC(y, m - 1, d, 0, 0, 0) - offsetMs);
   const end   = new Date(start.getTime() + 24 * 60 * 60 * 1000);
   return { start: start.toISOString(), end: end.toISOString() };
+}
+
+/**
+ * ISO instant for a Europe/Madrid wall-clock time: civil date YYYY-MM-DD at
+ * `minutes` since midnight (DST-aware). E.g. ('2026-06-05', 750) → 12:30 Madrid.
+ */
+export function madridWallTimeToIso(dateKey: string, minutes: number): string {
+  const [y, m, d] = dateKey.split('-').map(Number);
+  const offsetMs = madridOffsetMs(dateKey);
+  const hh = Math.floor(minutes / 60);
+  const mm = minutes % 60;
+  return new Date(Date.UTC(y, m - 1, d, hh, mm, 0) - offsetMs).toISOString();
+}
+
+/** Day of week for a YYYY-MM-DD key: 0=Sun … 6=Sat (calendar-stable, UTC-noon). */
+export function weekdayOfKey(dateKey: string): number {
+  const [y, m, d] = dateKey.split('-').map(Number);
+  return new Date(Date.UTC(y, m - 1, d, 12)).getUTCDay();
 }
 
 /**

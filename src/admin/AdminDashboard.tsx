@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { formatTime, formatDate, formatWeekday, madridDayRange, madridDayKeyOf, madridTodayKey, madridMinutesOfDay, madridWeekStartKey, madridWeekRange, addDaysKey, madridLastNDaysStart } from '../lib/time';
 import { workedMsForDay, msToHm, pairShifts } from '../lib/worked';
+import { computeWeekBackfill } from '../lib/backfill';
 import { attendanceProblems } from '../lib/absence';
 import type { ShiftPair } from '../lib/worked';
 import { useTranslation } from '../i18n/LanguageContext';
@@ -11,6 +12,7 @@ import { LanguagePicker } from '../components/LanguagePicker';
 import { LogoutButton } from '../components/LogoutButton';
 import { PunchCorrectionModal } from '../components/PunchCorrectionModal';
 import type { CorrectionTarget } from '../components/PunchCorrectionModal';
+import { BackfillWeekModal } from '../components/BackfillWeekModal';
 import WeekPicker from './WeekPicker';
 import type { EffectivePunch, Employee } from '../lib/types';
 import { OFFICE, OFFICES, type OfficeCoords } from '../lib/office';
@@ -406,6 +408,7 @@ export function AdminDashboard() {
   const [page, setPage] = useState(0);
   const [modal, setModal] = useState<ModalState | null>(null);
   const [showRules, setShowRules] = useState(false);
+  const [showBackfill, setShowBackfill] = useState(false);
   const [pendingApprovals, setPendingApprovals] = useState(0);
 
   // Reset to first page when filter inputs or page size change.
@@ -486,6 +489,16 @@ export function AdminDashboard() {
     () => pairShiftsByEmployee(visibleRows),
     [visibleRows],
   );
+
+  // One-click "backfill week": only meaningful for a single employee in week
+  // view. Computes the missing scheduled punches for the selected Mon–Sun week.
+  const canBackfill = isSingleEmployee && rangeFilter === 'week';
+  const weekBackfill = useMemo(() => {
+    if (!canBackfill) return [];
+    const { startKey } = madridWeekRange(selectedWeekStart);
+    const weekDayKeys = Array.from({ length: 7 }, (_, i) => addDaysKey(startKey, i));
+    return computeWeekBackfill({ weekDayKeys, shifts, nowMs: Date.now() });
+  }, [canBackfill, selectedWeekStart, shifts]);
 
   const todayKey = madridTodayKey();
 
@@ -774,6 +787,19 @@ export function AdminDashboard() {
         <button type="button" onClick={() => setModal({ mode: 'add' })} className="app-btn-ghost">
           {t('admin.correct.addPunch')}
         </button>
+        {canBackfill && (
+          <button
+            type="button"
+            onClick={() => setShowBackfill(true)}
+            disabled={weekBackfill.length === 0}
+            className="app-btn-ghost disabled:opacity-50 disabled:cursor-not-allowed"
+            title={weekBackfill.length === 0 ? t('admin.backfill.empty') : undefined}
+          >
+            {weekBackfill.length === 0
+              ? t('admin.backfill.button')
+              : `${t('admin.backfill.button')} (${weekBackfill.length})`}
+          </button>
+        )}
       </div>
 
       {stats.perEmployee.length > 0 && (
@@ -1052,6 +1078,16 @@ export function AdminDashboard() {
       ))}
 
       {showRules && <RulesModal t={t} onClose={() => setShowRules(false)} />}
+
+      {showBackfill && canBackfill && weekBackfill.length > 0 && (
+        <BackfillWeekModal
+          employeeId={filterEmployeeId}
+          employeeName={employees.find(e => e.id === filterEmployeeId)?.full_name ?? ''}
+          punches={weekBackfill}
+          onClose={() => setShowBackfill(false)}
+          onDone={() => { setShowBackfill(false); fetchPunches(); }}
+        />
+      )}
     </div>
   );
 }

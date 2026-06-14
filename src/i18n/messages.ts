@@ -248,6 +248,18 @@ interface Messages {
       reviewedBy: string;    // uses {name}, {time}
       truncated: string;     // uses {count}
     };
+    backfill: {
+      button: string;
+      title: string;
+      intro: string;         // uses {name}
+      empty: string;
+      morning: string;
+      afternoon: string;
+      reasonDefault: string;
+      confirm: string;       // uses {count}
+      submitting: string;
+      done: string;          // uses {count}
+    };
   };
   language: {
     label: string;
@@ -510,6 +522,18 @@ export const MESSAGES: Record<Lang, Messages> = {
         reviewedBy: '由 {name} 审批 · {time}',
         truncated: '仅显示最近 {count} 条',
       },
+      backfill: {
+        button: '一键补卡',
+        title: '一键补卡',
+        intro: '将按排班为 {name} 补齐本周缺失的打卡：',
+        empty: '本周无需补卡',
+        morning: '早班',
+        afternoon: '晚班',
+        reasonDefault: '管理员批量补卡（按排班）',
+        confirm: '确认补卡（{count}）',
+        submitting: '补卡中…',
+        done: '已补 {count} 条打卡',
+      },
     },
     language: { label: '语言' },
   },
@@ -768,6 +792,18 @@ export const MESSAGES: Record<Lang, Messages> = {
         reviewedBy: 'Reviewed by {name} · {time}',
         truncated: 'Showing the most recent {count}',
       },
+      backfill: {
+        button: 'Backfill week',
+        title: 'Backfill week',
+        intro: 'The following missing punches will be added for {name} per the schedule:',
+        empty: 'Nothing to backfill this week',
+        morning: 'Morning',
+        afternoon: 'Evening',
+        reasonDefault: 'Admin bulk backfill (per schedule)',
+        confirm: 'Confirm backfill ({count})',
+        submitting: 'Backfilling…',
+        done: 'Backfilled {count} punches',
+      },
     },
     language: { label: 'Language' },
   },
@@ -1025,6 +1061,18 @@ export const MESSAGES: Record<Lang, Messages> = {
         submittedBy: 'Enviada por {name} · {time}',
         reviewedBy: 'Revisada por {name} · {time}',
         truncated: 'Mostrando las {count} más recientes',
+      },
+      backfill: {
+        button: 'Rellenar semana',
+        title: 'Rellenar semana',
+        intro: 'Se añadirán los siguientes fichajes que faltan a {name} según el horario:',
+        empty: 'Nada que rellenar esta semana',
+        morning: 'Mañana',
+        afternoon: 'Tarde',
+        reasonDefault: 'Relleno masivo por admin (según horario)',
+        confirm: 'Confirmar relleno ({count})',
+        submitting: 'Rellenando…',
+        done: 'Se rellenaron {count} fichajes',
       },
     },
     language: { label: 'Idioma' },

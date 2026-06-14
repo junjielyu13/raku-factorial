@@ -102,3 +102,11 @@ export function adminCorrectPunch(args: {
 }) {
   return invoke<{ ok: true }>('admin-correct-punch', args);
 }
+
+export function backfillWeek(args: {
+  employee_id: string;
+  punches: { kind: 'in' | 'out'; time: string }[];
+  reason: string;
+}) {
+  return invoke<{ ok: true; count: number }>('admin-backfill-week', args);
+}
