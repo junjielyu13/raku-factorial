@@ -659,10 +659,20 @@ export function AdminDashboard() {
       }
       return { id, name, ms };
     });
+    // In week view, also surface rostered employees who didn't punch at all this
+    // week (ms = 0), so absences are visible and can be backfilled in one click.
+    if (rangeFilter === 'week') {
+      const roster = filterEmployeeId === 'all'
+        ? absenceRoster
+        : absenceRoster.filter(e => e.id === filterEmployeeId);
+      for (const e of roster) {
+        if (!byEmployee.has(e.id)) perEmployee.push({ id: e.id, name: e.full_name, ms: 0 });
+      }
+    }
     perEmployee.sort((a, b) => b.ms - a.ms || a.name.localeCompare(b.name));
     const grandMs = perEmployee.reduce((a, b) => a + b.ms, 0);
     return { perEmployee, grand: msToHm(grandMs), grandMs };
-  }, [visibleRows]);
+  }, [visibleRows, rangeFilter, filterEmployeeId, absenceRoster]);
 
   // Week-picker derived values (cheap; computed each render).
   const currentWeekStart = madridWeekStartKey(todayKey);
