@@ -235,6 +235,8 @@ interface Messages {
       outLabel: string;
       locationTitle: string;
       locationDesc: string; // uses {distance}
+      restTitle: string;
+      restDesc: string;
       close: string;
     };
     corrections: {
@@ -495,6 +497,8 @@ export const MESSAGES: Record<Lang, Messages> = {
         outLabel: '下班',
         locationTitle: '打卡位置',
         locationDesc: '需在距离办公点 {distance} 以内',
+        restTitle: '休息日',
+        restDesc: '周二下午 · 周三全天',
         close: '关闭',
       },
       corrections: {
@@ -751,6 +755,8 @@ export const MESSAGES: Record<Lang, Messages> = {
         outLabel: 'Clock out',
         locationTitle: 'Punch location',
         locationDesc: 'Must be within {distance} of an office',
+        restTitle: 'Rest days',
+        restDesc: 'Tue afternoon · Wed all day',
         close: 'Close',
       },
       corrections: {
@@ -1007,6 +1013,8 @@ export const MESSAGES: Record<Lang, Messages> = {
         outLabel: 'Salida',
         locationTitle: 'Ubicación de fichaje',
         locationDesc: 'Debe estar a menos de {distance} de una oficina',
+        restTitle: 'Días de descanso',
+        restDesc: 'Mar tarde · Mié todo el día',
         close: 'Cerrar',
       },
       corrections: {
