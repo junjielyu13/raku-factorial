@@ -5,6 +5,7 @@ import { supabase } from '../lib/supabase';
 import { formatTime, formatDate, formatWeekday, madridDayRange, madridDayKeyOf, madridTodayKey, madridMinutesOfDay, madridWeekStartKey, madridWeekRange, addDaysKey, madridLastNDaysStart } from '../lib/time';
 import { workedMsForDay, msToHm, pairShifts } from '../lib/worked';
 import { computeWeekBackfill } from '../lib/backfill';
+import type { BackfillPunch } from '../lib/backfill';
 import { attendanceProblems } from '../lib/absence';
 import type { ShiftPair } from '../lib/worked';
 import { useTranslation } from '../i18n/LanguageContext';
@@ -408,7 +409,7 @@ export function AdminDashboard() {
   const [page, setPage] = useState(0);
   const [modal, setModal] = useState<ModalState | null>(null);
   const [showRules, setShowRules] = useState(false);
-  const [showBackfill, setShowBackfill] = useState(false);
+  const [backfillEmpId, setBackfillEmpId] = useState<string | null>(null);
   const [pendingApprovals, setPendingApprovals] = useState(0);
 
   // Reset to first page when filter inputs or page size change.
@@ -490,15 +491,27 @@ export function AdminDashboard() {
     [visibleRows],
   );
 
-  // One-click "backfill week": only meaningful for a single employee in week
-  // view. Computes the missing scheduled punches for the selected Mon–Sun week.
-  const canBackfill = isSingleEmployee && rangeFilter === 'week';
-  const weekBackfill = useMemo(() => {
-    if (!canBackfill) return [];
+  // One-click "backfill week" is week-scoped. Compute the missing scheduled
+  // punches per employee (from the FULL fetched rows, so it's correct whether
+  // the view is filtered to one person or showing the whole roster). Keyed by
+  // employee id; employees with no punches at all this week get a full week.
+  const canBackfill = rangeFilter === 'week';
+  const weekBackfillByEmployee = useMemo(() => {
+    const map = new Map<string, BackfillPunch[]>();
+    if (!canBackfill) return map;
     const { startKey } = madridWeekRange(selectedWeekStart);
     const weekDayKeys = Array.from({ length: 7 }, (_, i) => addDaysKey(startKey, i));
-    return computeWeekBackfill({ weekDayKeys, shifts, nowMs: Date.now() });
-  }, [canBackfill, selectedWeekStart, shifts]);
+    const nowMs = Date.now();
+    const byEmp = new Map<string, Shift[]>();
+    for (const s of pairShiftsByEmployee(rows)) {
+      const empId = (s.in ?? s.out)!.employee_id;
+      (byEmp.get(empId) ?? byEmp.set(empId, []).get(empId)!).push(s);
+    }
+    for (const emp of employees) {
+      map.set(emp.id, computeWeekBackfill({ weekDayKeys, shifts: byEmp.get(emp.id) ?? [], nowMs }));
+    }
+    return map;
+  }, [canBackfill, selectedWeekStart, rows, employees]);
 
   const todayKey = madridTodayKey();
 
@@ -787,19 +800,20 @@ export function AdminDashboard() {
         <button type="button" onClick={() => setModal({ mode: 'add' })} className="app-btn-ghost">
           {t('admin.correct.addPunch')}
         </button>
-        {canBackfill && (
-          <button
-            type="button"
-            onClick={() => setShowBackfill(true)}
-            disabled={weekBackfill.length === 0}
-            className="app-btn-ghost disabled:opacity-50 disabled:cursor-not-allowed"
-            title={weekBackfill.length === 0 ? t('admin.backfill.empty') : undefined}
-          >
-            {weekBackfill.length === 0
-              ? t('admin.backfill.button')
-              : `${t('admin.backfill.button')} (${weekBackfill.length})`}
-          </button>
-        )}
+        {canBackfill && isSingleEmployee && (() => {
+          const count = weekBackfillByEmployee.get(filterEmployeeId)?.length ?? 0;
+          return (
+            <button
+              type="button"
+              onClick={() => setBackfillEmpId(filterEmployeeId)}
+              disabled={count === 0}
+              className="app-btn-ghost disabled:opacity-50 disabled:cursor-not-allowed"
+              title={count === 0 ? t('admin.backfill.empty') : undefined}
+            >
+              {count === 0 ? t('admin.backfill.button') : `${t('admin.backfill.button')} (${count})`}
+            </button>
+          );
+        })()}
       </div>
 
       {stats.perEmployee.length > 0 && (
@@ -820,17 +834,37 @@ export function AdminDashboard() {
           <ul className="divide-y divide-slate-100">
             {stats.perEmployee.map(s => {
               const hm = msToHm(s.ms);
+              const backfillCount = weekBackfillByEmployee.get(s.id)?.length ?? 0;
               return (
-                <li key={s.id} className="flex items-center justify-between py-2">
+                <li key={s.id} className="flex items-center justify-between gap-3 py-2">
                   <span className="text-sm text-slate-700">{s.name}</span>
-                  <span className="text-sm font-mono tabular-nums">
-                    <WeeklyHoursValue
-                      ms={s.ms}
-                      label={t('admin.stats.hours', { h: hm.h, m: hm.m })}
-                      showTarget={rangeFilter === 'week'}
-                      t={t}
-                    />
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-mono tabular-nums">
+                      <WeeklyHoursValue
+                        ms={s.ms}
+                        label={t('admin.stats.hours', { h: hm.h, m: hm.m })}
+                        showTarget={rangeFilter === 'week'}
+                        t={t}
+                      />
+                    </span>
+                    {canBackfill && backfillCount > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => setBackfillEmpId(s.id)}
+                        className="inline-flex items-center gap-1 h-7 px-2 rounded-md bg-amber-100 text-amber-800 hover:bg-amber-200 transition text-xs"
+                        title={`${t('admin.backfill.button')} (${backfillCount})`}
+                        aria-label={t('admin.backfill.button')}
+                      >
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-3.5 w-3.5" aria-hidden="true">
+                          <circle cx="12" cy="13" r="8" />
+                          <path d="M12 10v3l2 1" />
+                          <path d="M5 3 2 6" />
+                          <path d="m22 6-3-3" />
+                        </svg>
+                        {backfillCount}
+                      </button>
+                    )}
+                  </div>
                 </li>
               );
             })}
@@ -1079,13 +1113,13 @@ export function AdminDashboard() {
 
       {showRules && <RulesModal t={t} onClose={() => setShowRules(false)} />}
 
-      {showBackfill && canBackfill && weekBackfill.length > 0 && (
+      {backfillEmpId && (weekBackfillByEmployee.get(backfillEmpId)?.length ?? 0) > 0 && (
         <BackfillWeekModal
-          employeeId={filterEmployeeId}
-          employeeName={employees.find(e => e.id === filterEmployeeId)?.full_name ?? ''}
-          punches={weekBackfill}
-          onClose={() => setShowBackfill(false)}
-          onDone={() => { setShowBackfill(false); fetchPunches(); }}
+          employeeId={backfillEmpId}
+          employeeName={employees.find(e => e.id === backfillEmpId)?.full_name ?? ''}
+          punches={weekBackfillByEmployee.get(backfillEmpId)!}
+          onClose={() => setBackfillEmpId(null)}
+          onDone={() => { setBackfillEmpId(null); fetchPunches(); }}
         />
       )}
     </div>
