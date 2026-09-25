@@ -45,6 +45,7 @@ A clock-in/clock-out web app for a 5-person company in Spain. Compliant with **R
   - New (`PUBLISHABLE_KEY` = `sb_publishable_*`, `SECRET_KEY` = `sb_secret_*`) — used in frontend `.env.local` as `VITE_SUPABASE_ANON_KEY`
   - Both reachable via `supabase status -o json | jq -r .<KEY_NAME>`
 - **Use `execute_sql` / `supabase db query` for iterative schema work, not `apply_migration`** — `apply_migration` writes a history entry per call and breaks `db pull`/`db diff`. Generate the final migration with `supabase db pull <name> --local --yes`.
+- **New `public` tables/views need explicit `GRANT`s in the same migration.** Since 2026-10-30 Supabase no longer auto-grants `anon`/`authenticated`/`service_role`; without grants the Data API returns `permission denied`. Grant least privilege (no `anon`; `authenticated` usually `SELECT` only; `service_role` full DML) — see `20260925000001_explicit_table_grants.sql`. Note `DROP` + `CREATE` of an existing table/view also loses its grants (`CREATE OR REPLACE VIEW` keeps them).
 - **CORS preflight must allow `x-client-info` and `apikey`.** supabase-js v2 sends both headers on every call. Edge Function CORS responses (see `_shared/auth.ts`) must list them in `Access-Control-Allow-Headers`, otherwise browsers block at OPTIONS and the frontend just sees a generic network error. **`curl` does not perform preflight** — manual curl testing will NOT catch this. Always verify with the actual browser, or curl with `-X OPTIONS -H 'Access-Control-Request-Headers: ...'`.
 
 ## Frontend gotchas
