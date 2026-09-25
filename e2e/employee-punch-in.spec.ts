@@ -40,6 +40,6 @@ test.afterAll(cleanup);
 test('employee punches in successfully', async ({ page }) => {
   await seedEmployeeAndLogin(page, 'e2e-emp@test.local');
   await page.getByRole('button', { name: '上班打卡' }).click();
-  // After successful punch the today list shows "上班"
-  await expect(page.getByText('上班', { exact: true })).toBeVisible({ timeout: 10000 });
+  // After a successful punch the button flips to clock-out
+  await expect(page.getByRole('button', { name: '下班打卡' })).toBeVisible({ timeout: 10000 });
 });

@@ -10,6 +10,9 @@ export default defineConfig({
   use: {
     baseURL: 'http://localhost:5173',
     headless: true,
+    // Specs assert on zh UI strings; headless Chromium defaults to en-US,
+    // which the app would auto-detect as English.
+    locale: 'zh-CN',
     geolocation: { latitude: 40.416775, longitude: -3.703790 },
     permissions: ['geolocation'],
   },
