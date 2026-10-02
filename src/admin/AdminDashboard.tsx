@@ -7,7 +7,7 @@ import { workedMsForDay, msToHm, pairShifts } from '../lib/worked';
 import { computeWeekBackfill, weeklySchedule } from '../lib/backfill';
 import type { BackfillPunch } from '../lib/backfill';
 import { attendanceProblems, employedOn } from '../lib/absence';
-import { COMPANY_VACATIONS, isVacationDay } from '../lib/vacation';
+import { isVacationDay, vacationsInYear } from '../lib/vacation';
 import type { ShiftPair } from '../lib/worked';
 import { useTranslation } from '../i18n/LanguageContext';
 import { LanguagePicker } from '../components/LanguagePicker';
@@ -393,7 +393,7 @@ function RulesModal({
           <div className="text-sm font-medium text-slate-700">{t('admin.rules.restTitle')}</div>
           <div className="rounded-lg bg-slate-50 px-3 py-2 text-sm text-slate-700">
             <div>🛌 {t('admin.rules.restDesc')}</div>
-            {COMPANY_VACATIONS.map(v => (
+            {vacationsInYear(madridTodayKey().slice(0, 4)).map(v => (
               <div key={v.start}>
                 🏖️ {t('admin.rules.vacationDesc', {
                   range: `${formatDate(`${v.start}T12:00:00Z`)} – ${formatDate(`${v.end}T12:00:00Z`)}`,
