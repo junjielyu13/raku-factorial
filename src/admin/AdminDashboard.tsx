@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { formatTime, formatDate, formatWeekday, madridDayRange, madridDayKeyOf, madridTodayKey, madridMinutesOfDay, madridWeekStartKey, madridWeekRange, addDaysKey, madridLastNDaysStart } from '../lib/time';
 import { workedMsForDay, msToHm, pairShifts } from '../lib/worked';
-import { computeWeekBackfill, weeklySchedule } from '../lib/backfill';
+import { computeWeekBackfill, weeklySchedule, shiftSlotOf, scheduledPunchIso } from '../lib/backfill';
 import type { BackfillPunch } from '../lib/backfill';
 import { attendanceProblems, employedOn } from '../lib/absence';
 import { isVacationDay, vacationsInYear } from '../lib/vacation';
@@ -69,9 +69,9 @@ interface EmployeeOption { id: string; full_name: string; role: 'employee' | 'ad
 
 type ModalState =
   | { mode: 'add'; date?: string; employeeId?: string; employeeName?: string; defaultEmployeeId?: string }
-  | { mode: 'modify'; target: CorrectionTarget }
+  | { mode: 'modify'; target: CorrectionTarget; suggestedIso?: string }
   | { mode: 'delete'; targets: CorrectionTarget[] }
-  | { mode: 'add-missing'; employeeId: string; employeeName: string; kind: 'in' | 'out'; defaultDate?: string };
+  | { mode: 'add-missing'; employeeId: string; employeeName: string; kind: 'in' | 'out'; defaultDate?: string; suggestedIso?: string };
 
 type Shift = ShiftPair<Row>;
 
@@ -968,15 +968,20 @@ export function AdminDashboard() {
             ...(s.in ? [targetOf(s.in)] : []),
             ...(s.out ? [targetOf(s.out)] : []),
           ];
+          // Scheduled time for each end of this shift, prefilled when correcting.
+          // The half-day comes from the shift's anchor (its in), so a late-punched
+          // morning out (e.g. 19:26) still suggests the morning out, 16:00.
+          const slot = shiftSlotOf((s.in ?? s.out)!.effective_time);
+          const suggest = (kind: 'in' | 'out') => scheduledPunchIso(s.date, slot, kind);
           return (
             <li key={key} className="px-4 py-3 flex items-start justify-between gap-2">
               <div className="grid grid-cols-[auto_auto_auto] gap-x-2 gap-y-1.5 items-start w-fit max-w-full">
                 {s.in ? (
-                  <TimeBox p={s.in} onModify={() => setModal({ mode: 'modify', target: targetOf(s.in!) })} />
+                  <TimeBox p={s.in} onModify={() => setModal({ mode: 'modify', target: targetOf(s.in!), suggestedIso: suggest('in') })} />
                 ) : (
                   <button
                     type="button"
-                    onClick={() => setModal({ mode: 'add-missing', kind: 'in', employeeId: s.out!.employee_id, employeeName: s.out!.employee.full_name, defaultDate: s.date })}
+                    onClick={() => setModal({ mode: 'add-missing', kind: 'in', employeeId: s.out!.employee_id, employeeName: s.out!.employee.full_name, defaultDate: s.date, suggestedIso: suggest('in') })}
                     className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-amber-100 text-amber-800 text-sm font-medium hover:bg-amber-200 transition"
                   >
                     ❓ {t('admin.shifts.strayOut')}
@@ -984,11 +989,11 @@ export function AdminDashboard() {
                 )}
                 <span className="text-slate-400 self-center px-1">–</span>
                 {s.out ? (
-                  <TimeBox p={s.out} onModify={() => setModal({ mode: 'modify', target: targetOf(s.out!) })} />
+                  <TimeBox p={s.out} onModify={() => setModal({ mode: 'modify', target: targetOf(s.out!), suggestedIso: suggest('out') })} />
                 ) : (
                   <button
                     type="button"
-                    onClick={() => setModal({ mode: 'add-missing', kind: 'out', employeeId: s.in!.employee_id, employeeName: s.in!.employee.full_name, defaultDate: s.date })}
+                    onClick={() => setModal({ mode: 'add-missing', kind: 'out', employeeId: s.in!.employee_id, employeeName: s.in!.employee.full_name, defaultDate: s.date, suggestedIso: suggest('out') })}
                     className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-amber-100 text-amber-800 text-sm font-medium hover:bg-amber-200 transition"
                   >
                     ❓ {t('admin.shifts.openShift')}
@@ -1140,6 +1145,7 @@ export function AdminDashboard() {
         <PunchCorrectionModal
           mode="modify"
           target={modal.target}
+          suggestedIso={modal.suggestedIso}
           onClose={() => setModal(null)}
           onDone={() => { setModal(null); fetchPunches(); }}
         />
@@ -1150,6 +1156,7 @@ export function AdminDashboard() {
           employeeName={modal.employeeName}
           kind={modal.kind}
           defaultDate={modal.defaultDate}
+          suggestedIso={modal.suggestedIso}
           onClose={() => setModal(null)}
           onDone={() => { setModal(null); fetchPunches(); }}
         />

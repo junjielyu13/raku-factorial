@@ -41,7 +41,7 @@ const SHIFT_SPLIT_MIN = 18 * 60;
 const TUESDAY = 2;
 const WEDNESDAY = 3;
 
-type ShiftName = 'morning' | 'afternoon';
+export type ShiftName = 'morning' | 'afternoon';
 
 // Minimal shape of an existing paired shift (subset of worked.ts ShiftPair).
 export interface BackfillShift {
@@ -72,10 +72,19 @@ export function weeklySchedule(): { weekday: number; shifts: { in: number; out: 
   }));
 }
 
+// Half-day a shift belongs to, from its anchoring punch (its in, else its out).
+export function shiftSlotOf(anchorIso: string): ShiftName {
+  return madridMinutesOfDay(anchorIso) < SHIFT_SPLIT_MIN ? 'morning' : 'afternoon';
+}
+
 // Classify an existing shift to a half-day by its anchoring punch's time.
 function classify(s: BackfillShift): ShiftName {
-  const anchor = (s.in ?? s.out)!.effective_time;
-  return madridMinutesOfDay(anchor) < SHIFT_SPLIT_MIN ? 'morning' : 'afternoon';
+  return shiftSlotOf((s.in ?? s.out)!.effective_time);
+}
+
+// Scheduled ISO instant of a punch — prefilled when an admin corrects one.
+export function scheduledPunchIso(dateKey: string, slot: ShiftName, kind: 'in' | 'out'): string {
+  return madridWallTimeToIso(dateKey, scheduleFor(slot, weekdayOfKey(dateKey))[kind]);
 }
 
 export function computeWeekBackfill(args: {

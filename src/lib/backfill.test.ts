@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { computeWeekBackfill, weeklySchedule, type BackfillShift } from './backfill';
-import { madridWallTimeToIso, madridMinutesOfDay } from './time';
+import { computeWeekBackfill, weeklySchedule, shiftSlotOf, scheduledPunchIso, type BackfillShift } from './backfill';
+import { madridWallTimeToIso, madridMinutesOfDay, madridDayKeyOf } from './time';
 
 // Week of Mon 2026-06-01 … Sun 2026-06-07 (matches the screenshot's week).
 const WEEK = ['2026-06-01', '2026-06-02', '2026-06-03', '2026-06-04', '2026-06-05', '2026-06-06', '2026-06-07'];
@@ -167,5 +167,32 @@ describe('weeklySchedule', () => {
   it('totals 40h', () => {
     const min = weeklySchedule().flatMap(d => d.shifts).reduce((a, s) => a + s.out - s.in, 0);
     expect(min).toBe(40 * 60);
+  });
+});
+
+describe('shiftSlotOf / scheduledPunchIso', () => {
+  const hhmm = (iso: string) => {
+    const m = madridMinutesOfDay(iso);
+    return `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
+  };
+
+  it('classifies a shift by its anchoring punch time', () => {
+    expect(shiftSlotOf(madridWallTimeToIso('2026-09-06', 12 * 60 + 44))).toBe('morning');
+    expect(shiftSlotOf(madridWallTimeToIso('2026-09-06', 19 * 60 + 31))).toBe('afternoon');
+  });
+
+  it('gives the scheduled in/out for each half-day', () => {
+    expect(hhmm(scheduledPunchIso('2026-09-06', 'morning', 'in'))).toBe('12:30');
+    expect(hhmm(scheduledPunchIso('2026-09-06', 'morning', 'out'))).toBe('16:00');
+    expect(hhmm(scheduledPunchIso('2026-09-06', 'afternoon', 'in'))).toBe('19:30');
+  });
+
+  it('afternoon out is 23:00 Mon/Thu and 23:30 Fri/Sat/Sun', () => {
+    expect(hhmm(scheduledPunchIso('2026-09-03', 'afternoon', 'out'))).toBe('23:00'); // Thu
+    expect(hhmm(scheduledPunchIso('2026-09-06', 'afternoon', 'out'))).toBe('23:30'); // Sun
+  });
+
+  it('keeps the Madrid calendar date', () => {
+    expect(madridDayKeyOf(scheduledPunchIso('2026-09-06', 'afternoon', 'out'))).toBe('2026-09-06');
   });
 });

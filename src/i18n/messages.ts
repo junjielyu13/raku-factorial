@@ -227,6 +227,8 @@ interface Messages {
       timeLabel: string;
       reasonLabel: string;
       reasonPlaceholder: string;
+      scheduleHintModify: string; // uses {time}
+      scheduleHintAdd: string;
       selectEmployee: string;
       save: string;
       saving: string;
@@ -502,6 +504,8 @@ export const MESSAGES: Record<Lang, Messages> = {
         timeLabel: '时间',
         reasonLabel: '原因',
         reasonPlaceholder: '请填写修正原因（审计留存）',
+        scheduleHintModify: '已按排班时间自动填写（原时间 {time}）',
+        scheduleHintAdd: '已按排班时间自动填写',
         selectEmployee: '选择员工',
         save: '保存',
         saving: '保存中…',
@@ -785,6 +789,8 @@ export const MESSAGES: Record<Lang, Messages> = {
         timeLabel: 'Time',
         reasonLabel: 'Reason',
         reasonPlaceholder: 'Reason for the correction (kept for audit)',
+        scheduleHintModify: 'Prefilled with the scheduled time (original: {time})',
+        scheduleHintAdd: 'Prefilled with the scheduled time',
         selectEmployee: 'Select employee',
         save: 'Save',
         saving: 'Saving…',
@@ -1068,6 +1074,8 @@ export const MESSAGES: Record<Lang, Messages> = {
         timeLabel: 'Hora',
         reasonLabel: 'Motivo',
         reasonPlaceholder: 'Motivo de la corrección (se conserva para auditoría)',
+        scheduleHintModify: 'Rellenado con la hora del horario (original: {time})',
+        scheduleHintAdd: 'Rellenado con la hora del horario',
         selectEmployee: 'Seleccionar empleado',
         save: 'Guardar',
         saving: 'Guardando…',

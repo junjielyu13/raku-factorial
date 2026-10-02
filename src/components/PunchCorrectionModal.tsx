@@ -34,6 +34,8 @@ type Props =
   | {
       mode: 'modify';
       target: CorrectionTarget;
+      // Scheduled time for this punch (ISO); prefilled instead of the original.
+      suggestedIso?: string;
       onClose: () => void;
       onDone: () => void;
     }
@@ -54,6 +56,8 @@ type Props =
       // YYYY-MM-DD of the shift, used to prefill the time field's date (time
       // defaults to now) so the admin doesn't pick the day manually.
       defaultDate?: string;
+      // Scheduled time for the missing punch (ISO); prefilled when given.
+      suggestedIso?: string;
       onClose: () => void;
       onDone: () => void;
     };
@@ -85,8 +89,14 @@ export function PunchCorrectionModal(props: Props) {
   const initialIso = props.mode === 'modify' ? props.target.effective_time : '';
   const defaultDate =
     (props.mode === 'add' || props.mode === 'add-missing') ? props.defaultDate : undefined;
+  // Prefill the scheduled time when one is suggested and it isn't in the future
+  // (the input's max is now, e.g. today's evening out before it has happened).
+  const offered = (props.mode === 'modify' || props.mode === 'add-missing') ? props.suggestedIso : undefined;
+  const [suggestedIso] = useState(() =>
+    offered && new Date(offered).getTime() <= Date.now() ? offered : undefined);
   const initialDatetime =
-    initialIso ? toLocalInput(initialIso)
+    suggestedIso ? toLocalInput(suggestedIso)
+    : initialIso ? toLocalInput(initialIso)
     : defaultDate ? dateKeyToLocalInput(defaultDate)
     : '';
   const [kind, setKind] = useState<'in' | 'out'>(initialKind);
@@ -194,6 +204,13 @@ export function PunchCorrectionModal(props: Props) {
                 <span className="text-sm font-medium text-slate-700">{t('admin.correct.timeLabel')}</span>
                 <input type="datetime-local" required max={toLocalInput(new Date().toISOString())}
                   value={datetime} onChange={e => setDatetime(e.target.value)} className="app-input" />
+                {suggestedIso && (
+                  <span className="block text-xs text-slate-500">
+                    {modifyTarget
+                      ? t('admin.correct.scheduleHintModify', { time: formatDateTime(modifyTarget.effective_time) })
+                      : t('admin.correct.scheduleHintAdd')}
+                  </span>
+                )}
               </label>
             </>
           )}
