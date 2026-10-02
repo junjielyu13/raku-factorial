@@ -1,7 +1,7 @@
 // src/admin/AdminExport.tsx
 import { useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { exportData } from '../lib/api';
+import { exportData, fetchCompany, fetchDniByEmail } from '../lib/api';
 import type { ApiError } from '../lib/api';
 import { downloadMonthlyPdf, type Period } from '../lib/monthlyPdf';
 import { downloadExcel } from '../lib/excelExport';
@@ -59,8 +59,8 @@ export function AdminExport() {
   async function goPdf() {
     setBusy(true); setErr(null);
     try {
-      const data = await exportData(period);
-      await downloadMonthlyPdf(data.punches, period);
+      const [data, dni, company] = await Promise.all([exportData(period), fetchDniByEmail(), fetchCompany()]);
+      await downloadMonthlyPdf(data.punches, period, dni, company);
     } catch (e: unknown) {
       setErr(t('admin.export.failed', { code: (e as ApiError).code }));
     } finally {

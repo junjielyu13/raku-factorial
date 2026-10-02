@@ -6,7 +6,12 @@
 // locale. pdfmake itself is loaded lazily in `downloadMonthlyPdf` so it never
 // enters the main bundle.
 import { pairShifts, workedMsForDay, msToHm } from './worked';
-import { COMPANY_INFO, EMPLOYEE_DNI, type CompanyInfo } from './companyInfo';
+
+// Razón social + CIF, from the `company` table (see `fetchCompany`).
+export interface CompanyInfo {
+  name: string;
+  cif: string;
+}
 
 export interface PunchRow {
   employee_id: string;
@@ -198,8 +203,11 @@ export function buildDocDefinition(model: EmployeeReport[], company: CompanyInfo
 // Build the report from the month's punches and trigger a browser download.
 // pdfmake (and its embedded fonts) is imported here, lazily, so it stays out of
 // the main bundle and is only fetched when the user actually exports a PDF.
-export async function downloadMonthlyPdf(punches: PunchRow[], period: Period): Promise<void> {
-  const doc = buildDocDefinition(buildReportModel(punches, EMPLOYEE_DNI), COMPANY_INFO, period);
+// `dni` maps employee email → DNI/NIE (see `fetchDniByEmail`).
+export async function downloadMonthlyPdf(
+  punches: PunchRow[], period: Period, dni: Record<string, string>, company: CompanyInfo,
+): Promise<void> {
+  const doc = buildDocDefinition(buildReportModel(punches, dni), company, period);
   /* eslint-disable @typescript-eslint/no-explicit-any */
   const pdfMakeMod: any = await import('pdfmake/build/pdfmake');
   const vfsMod: any = await import('pdfmake/build/vfs_fonts');

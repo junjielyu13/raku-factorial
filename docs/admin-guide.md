@@ -36,6 +36,14 @@ VALUES ('<把 User UID 粘在这里>', '员工邮箱', '员工真实姓名', 'em
 
 看到 "Success. No rows returned" 即完成。
 
+再登记员工的 DNI/NIE（会印在合规 PDF 上；只有管理员能读，**不要写进代码**——仓库是公开的）：
+
+```sql
+INSERT INTO public.employee_dni (employee_id, dni)
+VALUES ('<User UID>', '12345678Z')
+ON CONFLICT (employee_id) DO UPDATE SET dni = EXCLUDED.dni, updated_at = now();
+```
+
 ### 4. 通知员工
 
 把这三样发给员工（建议用一次性消息或要求他登录后立即改密码）：
@@ -126,6 +134,12 @@ WHERE email = '离职员工邮箱';
 选月份 → 下载 CSV。CSV 包含每条打卡记录 + 每个员工的月度总工时。
 
 合规存档建议每月初导出一次上个月的，保存 4 年（劳动法要求）。
+
+PDF 抬头的公司名称和 CIF 来自 `company` 表（只有一行），修改：
+
+```sql
+UPDATE public.company SET name = 'RAKU RAKU SL', cif = 'B23924483', updated_at = now();
+```
 
 ---
 

@@ -1,6 +1,6 @@
 // src/lib/api.ts
 import { supabase } from './supabase';
-import type { Period } from './monthlyPdf';
+import type { CompanyInfo, Period } from './monthlyPdf';
 
 interface PunchInArgs {
   kind: 'in' | 'out';
@@ -90,6 +90,23 @@ function periodParams(p: Period): Record<string, string> {
 
 export function exportData(period: Period) {
   return invoke<MonthExport>('export-month', null, 'GET', { ...periodParams(period), format: 'json' }, 'json');
+}
+
+// Admin-only (RLS on `employee_dni`): email → DNI/NIE for the compliance PDF.
+export async function fetchDniByEmail(): Promise<Record<string, string>> {
+  const { data, error } = await supabase
+    .from('employee_dni')
+    .select('dni, employees(email)')
+    .returns<{ dni: string; employees: { email: string } | null }[]>();
+  if (error) throw { status: 500, code: error.code ?? 'UNKNOWN', message: error.message } satisfies ApiError;
+  return Object.fromEntries(data.filter(r => r.employees).map(r => [r.employees!.email, r.dni]));
+}
+
+// Admin-only (RLS on `company`): razón social + CIF for the compliance PDF.
+export async function fetchCompany(): Promise<CompanyInfo> {
+  const { data, error } = await supabase.from('company').select('name, cif').single();
+  if (error) throw { status: 500, code: error.code ?? 'UNKNOWN', message: error.message } satisfies ApiError;
+  return data;
 }
 
 export function adminCorrectPunch(args: {
