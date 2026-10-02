@@ -1,5 +1,5 @@
 // Company identity + per-employee DNI for the compliance PDF (registro de
-// jornada). PLACEHOLDERS for now — fill these in with the real values.
+// jornada). EMPLOYEE_DNI is still a placeholder — fill it in with real values.
 //
 // - COMPANY_INFO: appears on every report sheet.
 // - EMPLOYEE_DNI: keyed by the employee's email; missing entries render as '___'.
@@ -10,8 +10,8 @@ export interface CompanyInfo {
 }
 
 export const COMPANY_INFO: CompanyInfo = {
-  name: '___', // TODO: razón social, e.g. "Raku Sant Cugat SL"
-  cif: '___',  // TODO: CIF, e.g. "B12345678"
+  name: 'RAKU RAKU SL',
+  cif: 'B23924483',
 };
 
 export const EMPLOYEE_DNI: Record<string, string> = {
