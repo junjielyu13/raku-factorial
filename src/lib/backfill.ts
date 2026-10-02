@@ -6,6 +6,7 @@
 //   • Two shifts per workday: morning 12:30→16:00, afternoon 19:30→23:00
 //     (23:30 on Fri/Sat/Sun). 40h/week in total (contract, "Jornada y horario").
 //   • Rest periods are skipped: Tuesday afternoon, and all of Wednesday.
+//   • Days before the employee's start date, and company vacation days, are skipped.
 //   • Fill what's MISSING, never overwrite a real punch:
 //       - half-day with no punch at all        → add both in + out
 //       - half-day clocked in but never out     → add the out only
@@ -13,6 +14,7 @@
 //   • Never create an open shift: a full shift is only added once its out time
 //     is in the past; an out-only fill is only added once that out is past.
 import { madridMinutesOfDay, madridWallTimeToIso, weekdayOfKey } from './time';
+import { isVacationDay } from './vacation';
 
 // Schedule boundary times (Madrid minutes since midnight). Kept in sync with the
 // punch-time windows shown on the admin rules card (lower bound of each window).
@@ -62,6 +64,14 @@ function scheduledShifts(weekday: number): ShiftName[] {
   return ['morning', 'afternoon'];
 }
 
+// The contract week, Mon→Sun (JS weekday numbers), for display on the rules card.
+export function weeklySchedule(): { weekday: number; shifts: { in: number; out: number }[] }[] {
+  return [1, 2, 3, 4, 5, 6, 0].map(weekday => ({
+    weekday,
+    shifts: scheduledShifts(weekday).map(name => scheduleFor(name, weekday)),
+  }));
+}
+
 // Classify an existing shift to a half-day by its anchoring punch's time.
 function classify(s: BackfillShift): ShiftName {
   const anchor = (s.in ?? s.out)!.effective_time;
@@ -72,11 +82,13 @@ export function computeWeekBackfill(args: {
   weekDayKeys: string[];
   shifts: BackfillShift[];
   nowMs: number;
+  startDate?: string;                                      // Madrid YYYY-MM-DD
 }): BackfillPunch[] {
-  const { weekDayKeys, shifts, nowMs } = args;
+  const { weekDayKeys, shifts, nowMs, startDate } = args;
   const result: BackfillPunch[] = [];
 
   for (const dateKey of weekDayKeys) {
+    if ((startDate && dateKey < startDate) || isVacationDay(dateKey)) continue;
     const weekday = weekdayOfKey(dateKey);
     const wanted = scheduledShifts(weekday);
     if (wanted.length === 0) continue;

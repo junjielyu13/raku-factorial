@@ -122,6 +122,7 @@ interface Messages {
     warningsCollapse: string;
     absentExpand: string; // uses {count}
     absentCollapse: string;
+    vacation: string;
     longShiftWarn: string; // uses {hours}
     filterAll: string;
     filterLabel: string;
@@ -231,6 +232,10 @@ interface Messages {
       button: string;
       title: string;
       timeTitle: string;
+      scheduleTitle: string;
+      scheduleWeekly: string; // uses {h}
+      scheduleRest: string;
+      vacationDesc: string;   // uses {range}
       inLabel: string;
       outLabel: string;
       locationTitle: string;
@@ -391,6 +396,7 @@ export const MESSAGES: Record<Lang, Messages> = {
       warningsCollapse: '收起',
       absentExpand: '{count} 人考勤异常',
       absentCollapse: '收起',
+      vacation: '休假',
       longShiftWarn: '工时过长（超过 {hours} 小时）',
       filterAll: '全部员工',
       filterLabel: '员工筛选',
@@ -506,6 +512,10 @@ export const MESSAGES: Record<Lang, Messages> = {
         button: '打卡规则',
         title: '打卡规则',
         timeTitle: '打卡时间',
+        scheduleTitle: '上班时间',
+        scheduleWeekly: '每周 {h} 小时',
+        scheduleRest: '休息',
+        vacationDesc: '公司休假：{range}',
         inLabel: '上班',
         outLabel: '下班',
         locationTitle: '打卡位置',
@@ -662,6 +672,7 @@ export const MESSAGES: Record<Lang, Messages> = {
       warningsCollapse: 'Collapse',
       absentExpand: '{count} with attendance issues',
       absentCollapse: 'Collapse',
+      vacation: 'Vacation',
       longShiftWarn: 'Shift longer than {hours}h',
       filterAll: 'All employees',
       filterLabel: 'Filter by employee',
@@ -777,6 +788,10 @@ export const MESSAGES: Record<Lang, Messages> = {
         button: 'Punch rules',
         title: 'Punch rules',
         timeTitle: 'Punch time',
+        scheduleTitle: 'Work schedule',
+        scheduleWeekly: '{h} h per week',
+        scheduleRest: 'Day off',
+        vacationDesc: 'Company vacation: {range}',
         inLabel: 'Clock in',
         outLabel: 'Clock out',
         locationTitle: 'Punch location',
@@ -933,6 +948,7 @@ export const MESSAGES: Record<Lang, Messages> = {
       warningsCollapse: 'Contraer',
       absentExpand: '{count} con incidencias',
       absentCollapse: 'Contraer',
+      vacation: 'Vacaciones',
       longShiftWarn: 'Jornada de más de {hours} h',
       filterAll: 'Todos los empleados',
       filterLabel: 'Filtrar por empleado',
@@ -1048,6 +1064,10 @@ export const MESSAGES: Record<Lang, Messages> = {
         button: 'Reglas de fichaje',
         title: 'Reglas de fichaje',
         timeTitle: 'Hora de fichaje',
+        scheduleTitle: 'Horario',
+        scheduleWeekly: '{h} h semanales',
+        scheduleRest: 'Libre',
+        vacationDesc: 'Vacaciones de empresa: {range}',
         inLabel: 'Entrada',
         outLabel: 'Salida',
         locationTitle: 'Ubicación de fichaje',

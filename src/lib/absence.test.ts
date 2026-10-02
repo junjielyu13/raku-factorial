@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { attendanceProblems, type RosterMember } from './absence';
+import { attendanceProblems, employedOn, type RosterMember } from './absence';
 
 const roster: RosterMember[] = [
   { id: 'jose', full_name: 'Jose' },
@@ -52,5 +52,25 @@ describe('attendanceProblems', () => {
       'Ricardo',
       'Wu Rongjiao',
     ]);
+  });
+});
+
+describe('employedOn', () => {
+  const staff = [
+    { id: 'jose', start_date: '2026-04-29' },
+    { id: 'daniela', start_date: '2026-10-05' },
+  ];
+
+  it('excludes members whose start date is after the day', () => {
+    expect(employedOn(staff, '2026-10-04').map(m => m.id)).toEqual(['jose']);
+  });
+
+  it('includes a member from their start date onward (inclusive)', () => {
+    expect(employedOn(staff, '2026-10-05').map(m => m.id)).toEqual(['jose', 'daniela']);
+    expect(employedOn(staff, '2026-10-06').map(m => m.id)).toEqual(['jose', 'daniela']);
+  });
+
+  it('excludes everyone before the company-wide start', () => {
+    expect(employedOn(staff, '2026-04-28')).toEqual([]);
   });
 });

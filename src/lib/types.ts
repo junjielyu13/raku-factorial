@@ -5,6 +5,7 @@ export interface Employee {
   full_name: string;
   role: 'employee' | 'admin' | 'it';
   active: boolean;
+  start_date: string; // Madrid YYYY-MM-DD, first working day
 }
 
 // 'it' holds full admin privileges (it just doesn't clock in). Use this for

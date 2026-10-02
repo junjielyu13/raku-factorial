@@ -26,3 +26,9 @@ export function attendanceProblems(
     .filter(m => !presentIds.has(m.id) || incompleteIds.has(m.id))
     .sort((a, b) => a.full_name.localeCompare(b.full_name));
 }
+
+// Members already employed on `dateKey` (Madrid YYYY-MM-DD): days before an
+// employee's start date are never absences. ISO date keys compare as strings.
+export function employedOn<T extends { start_date: string }>(members: T[], dateKey: string): T[] {
+  return members.filter(m => m.start_date <= dateKey);
+}

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { computeWeekBackfill, type BackfillShift } from './backfill';
+import { computeWeekBackfill, weeklySchedule, type BackfillShift } from './backfill';
 import { madridWallTimeToIso, madridMinutesOfDay } from './time';
 
 // Week of Mon 2026-06-01 … Sun 2026-06-07 (matches the screenshot's week).
@@ -17,8 +17,8 @@ function shift(date: string, inMin: number | null, outMin: number | null): Backf
   };
 }
 
-function run(shifts: BackfillShift[], nowIso = FUTURE_NOW) {
-  return computeWeekBackfill({ weekDayKeys: WEEK, shifts, nowMs: new Date(nowIso).getTime() });
+function run(shifts: BackfillShift[], nowIso = FUTURE_NOW, startDate?: string) {
+  return computeWeekBackfill({ weekDayKeys: WEEK, shifts, nowMs: new Date(nowIso).getTime(), startDate });
 }
 
 // Compact view: "date shift kind@HH:MM"
@@ -127,5 +127,45 @@ describe('computeWeekBackfill', () => {
       ms += new Date(punches[i + 1].timeIso).getTime() - new Date(punches[i].timeIso).getTime();
     }
     expect(ms).toBe(40 * 60 * 60 * 1000);
+  });
+
+  it('skips days before the employee start date', () => {
+    const days = new Set(run([], FUTURE_NOW, FRI).map(p => p.dateKey));
+    expect([...days].sort()).toEqual(['2026-06-05', '2026-06-06', '2026-06-07']);
+  });
+
+  it('fills nothing when the employee starts after the week', () => {
+    expect(run([], FUTURE_NOW, '2026-06-08')).toEqual([]);
+  });
+
+  it('skips company vacation days (2026-08-03 … 2026-08-24)', () => {
+    const fullVacationWeek = ['2026-08-03', '2026-08-04', '2026-08-05', '2026-08-06', '2026-08-07', '2026-08-08', '2026-08-09'];
+    expect(computeWeekBackfill({ weekDayKeys: fullVacationWeek, shifts: [], nowMs: new Date(FUTURE_NOW).getTime() + 1e11 })).toEqual([]);
+
+    const lastWeek = ['2026-08-24', '2026-08-25', '2026-08-26', '2026-08-27', '2026-08-28', '2026-08-29', '2026-08-30'];
+    const days = new Set(computeWeekBackfill({ weekDayKeys: lastWeek, shifts: [], nowMs: new Date(FUTURE_NOW).getTime() + 1e11 }).map(p => p.dateKey));
+    expect(days.has('2026-08-24')).toBe(false);
+    expect(days.has('2026-08-25')).toBe(true);
+  });
+});
+
+describe('weeklySchedule', () => {
+  const fmt = (m: number) => `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
+
+  it('lists Mon→Sun with the contract shifts', () => {
+    expect(weeklySchedule().map(d => [d.weekday, d.shifts.map(s => `${fmt(s.in)}-${fmt(s.out)}`).join(' ')])).toEqual([
+      [1, '12:30-16:00 19:30-23:00'],
+      [2, '12:30-16:00'],
+      [3, ''],
+      [4, '12:30-16:00 19:30-23:00'],
+      [5, '12:30-16:00 19:30-23:30'],
+      [6, '12:30-16:00 19:30-23:30'],
+      [0, '12:30-16:00 19:30-23:30'],
+    ]);
+  });
+
+  it('totals 40h', () => {
+    const min = weeklySchedule().flatMap(d => d.shifts).reduce((a, s) => a + s.out - s.in, 0);
+    expect(min).toBe(40 * 60);
   });
 });

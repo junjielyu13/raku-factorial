@@ -4,9 +4,10 @@ import { Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { formatTime, formatDate, formatWeekday, madridDayRange, madridDayKeyOf, madridTodayKey, madridMinutesOfDay, madridWeekStartKey, madridWeekRange, addDaysKey, madridLastNDaysStart } from '../lib/time';
 import { workedMsForDay, msToHm, pairShifts } from '../lib/worked';
-import { computeWeekBackfill } from '../lib/backfill';
+import { computeWeekBackfill, weeklySchedule } from '../lib/backfill';
 import type { BackfillPunch } from '../lib/backfill';
-import { attendanceProblems } from '../lib/absence';
+import { attendanceProblems, employedOn } from '../lib/absence';
+import { COMPANY_VACATIONS, isVacationDay } from '../lib/vacation';
 import type { ShiftPair } from '../lib/worked';
 import { useTranslation } from '../i18n/LanguageContext';
 import { LanguagePicker } from '../components/LanguagePicker';
@@ -64,7 +65,7 @@ interface Row extends EffectivePunch {
   punch: { latitude: number | null; longitude: number | null; accuracy_m: number | null } | null;
 }
 
-interface EmployeeOption { id: string; full_name: string; role: 'employee' | 'admin' | 'it' }
+interface EmployeeOption { id: string; full_name: string; role: 'employee' | 'admin' | 'it'; start_date: string }
 
 type ModalState =
   | { mode: 'add'; date?: string; employeeId?: string; employeeName?: string; defaultEmployeeId?: string }
@@ -339,7 +340,10 @@ function AbsenceWarn({
   );
 }
 
-// Read-only modal describing the punch time + location rules.
+// Any Monday; adding 0..6 days gives Mon→Sun, used only to localize weekday names.
+const REFERENCE_MONDAY = '2026-06-01';
+
+// Read-only modal describing the schedule, punch time + location rules.
 function RulesModal({
   t,
   onClose,
@@ -351,6 +355,25 @@ function RulesModal({
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 px-4" onClick={onClose}>
       <div className="app-card w-full max-w-md p-5 space-y-4" onClick={e => e.stopPropagation()}>
         <h2 className="text-lg font-bold text-slate-900">{t('admin.rules.title')}</h2>
+
+        <div className="space-y-1.5">
+          <div className="flex justify-between gap-3 text-sm font-medium text-slate-700">
+            <span>{t('admin.rules.scheduleTitle')}</span>
+            <span className="font-normal text-slate-500">{t('admin.rules.scheduleWeekly', { h: WEEKLY_TARGET_HOURS })}</span>
+          </div>
+          <div className="rounded-lg bg-slate-50 px-3 py-2 text-sm text-slate-700 space-y-1">
+            {weeklySchedule().map(({ weekday, shifts }, i) => (
+              <div key={weekday} className="flex justify-between gap-3">
+                <span className="text-slate-500">{formatWeekday(`${addDaysKey(REFERENCE_MONDAY, i)}T12:00:00Z`)}</span>
+                {shifts.length === 0
+                  ? <span className="text-slate-400">{t('admin.rules.scheduleRest')}</span>
+                  : <span className="font-mono tabular-nums">
+                      {shifts.map(sh => `${fmtMinutes(sh.in)}–${fmtMinutes(sh.out)}`).join(' / ')}
+                    </span>}
+              </div>
+            ))}
+          </div>
+        </div>
 
         <div className="space-y-1.5">
           <div className="text-sm font-medium text-slate-700">{t('admin.rules.timeTitle')}</div>
@@ -369,7 +392,14 @@ function RulesModal({
         <div className="space-y-1.5">
           <div className="text-sm font-medium text-slate-700">{t('admin.rules.restTitle')}</div>
           <div className="rounded-lg bg-slate-50 px-3 py-2 text-sm text-slate-700">
-            🛌 {t('admin.rules.restDesc')}
+            <div>🛌 {t('admin.rules.restDesc')}</div>
+            {COMPANY_VACATIONS.map(v => (
+              <div key={v.start}>
+                🏖️ {t('admin.rules.vacationDesc', {
+                  range: `${formatDate(`${v.start}T12:00:00Z`)} – ${formatDate(`${v.end}T12:00:00Z`)}`,
+                })}
+              </div>
+            ))}
           </div>
         </div>
 
@@ -418,7 +448,7 @@ export function AdminDashboard() {
   }, [rangeFilter, selectedDate, selectedWeekStart, customStart, customEnd, filterEmployeeId, pageSize]);
 
   useEffect(() => {
-    supabase.from('employees').select('id, full_name, role').eq('active', true).order('full_name')
+    supabase.from('employees').select('id, full_name, role, start_date').eq('active', true).order('full_name')
       .then(({ data }) => setEmployees((data as EmployeeOption[]) ?? []));
   }, []);
 
@@ -508,7 +538,7 @@ export function AdminDashboard() {
       (byEmp.get(empId) ?? byEmp.set(empId, []).get(empId)!).push(s);
     }
     for (const emp of employees) {
-      map.set(emp.id, computeWeekBackfill({ weekDayKeys, shifts: byEmp.get(emp.id) ?? [], nowMs }));
+      map.set(emp.id, computeWeekBackfill({ weekDayKeys, shifts: byEmp.get(emp.id) ?? [], nowMs, startDate: emp.start_date }));
     }
     return map;
   }, [canBackfill, selectedWeekStart, rows, employees]);
@@ -606,9 +636,10 @@ export function AdminDashboard() {
   }, [rangeDayKeys, safePage, pageSize, shiftsByDay]);
 
   // Employees expected to clock in: everyone active except IT (who holds admin
-  // rights but doesn't punch). Used to flag per-day absences.
+  // rights but doesn't punch). Used to flag per-day absences; narrow it per day
+  // with employedOn() so nobody is flagged before their start date.
   const absenceRoster = useMemo(
-    () => employees.filter(e => e.role !== 'it').map(e => ({ id: e.id, full_name: e.full_name })),
+    () => employees.filter(e => e.role !== 'it').map(e => ({ id: e.id, full_name: e.full_name, start_date: e.start_date })),
     [employees],
   );
 
@@ -661,18 +692,22 @@ export function AdminDashboard() {
     });
     // In week view, also surface rostered employees who didn't punch at all this
     // week (ms = 0), so absences are visible and can be backfilled in one click.
+    // Only if they had at least one non-vacation day employed that week.
     if (rangeFilter === 'week') {
+      const { startKey } = madridWeekRange(selectedWeekStart);
+      const workDays = Array.from({ length: 7 }, (_, i) => addDaysKey(startKey, i)).filter(dk => !isVacationDay(dk));
       const roster = filterEmployeeId === 'all'
         ? absenceRoster
         : absenceRoster.filter(e => e.id === filterEmployeeId);
       for (const e of roster) {
-        if (!byEmployee.has(e.id)) perEmployee.push({ id: e.id, name: e.full_name, ms: 0 });
+        const expected = workDays.some(dk => e.start_date <= dk);
+        if (expected && !byEmployee.has(e.id)) perEmployee.push({ id: e.id, name: e.full_name, ms: 0 });
       }
     }
     perEmployee.sort((a, b) => b.ms - a.ms || a.name.localeCompare(b.name));
     const grandMs = perEmployee.reduce((a, b) => a + b.ms, 0);
     return { perEmployee, grand: msToHm(grandMs), grandMs };
-  }, [visibleRows, rangeFilter, filterEmployeeId, absenceRoster]);
+  }, [visibleRows, rangeFilter, filterEmployeeId, absenceRoster, selectedWeekStart]);
 
   // Week-picker derived values (cheap; computed each render).
   const currentWeekStart = madridWeekStartKey(todayKey);
@@ -992,11 +1027,12 @@ export function AdminDashboard() {
               const dayIso = `${date}T12:00:00Z`;
               const dayHm = msToHm(shiftDayTotalsMs.get(date) ?? 0);
               // Absences only make sense across the whole roster, not when
-              // filtered to one person.
-              const absent = isSingleEmployee
+              // filtered to one person; never on company vacation days.
+              const vacation = isVacationDay(date);
+              const absent = isSingleEmployee || vacation
                 ? []
                 : attendanceProblems(
-                    absenceRoster,
+                    employedOn(absenceRoster, date),
                     presentByDay.get(date) ?? new Set(),
                     incompleteByDay.get(date) ?? new Set(),
                   );
@@ -1027,6 +1063,11 @@ export function AdminDashboard() {
                         </svg>
                       </button>
                       <AbsenceWarn names={absentNames} t={t} />
+                      {vacation && (
+                        <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-sky-100 text-sky-800">
+                          🏖️ {t('admin.vacation')}
+                        </span>
+                      )}
                     </div>
                     <div className="flex items-center gap-1.5 text-sm text-slate-700">
                       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4 text-slate-500" aria-hidden="true">
