@@ -3,7 +3,8 @@
 // it can be unit-tested and reused by the preview modal and the submit call.
 //
 // Rules (see docs / rules card):
-//   • Two shifts per workday: morning 12:30→16:00, afternoon 19:30→23:00.
+//   • Two shifts per workday: morning 12:30→16:00, afternoon 19:30→23:00
+//     (23:30 on Fri/Sat/Sun). 40h/week in total (contract, "Jornada y horario").
 //   • Rest periods are skipped: Tuesday afternoon, and all of Wednesday.
 //   • Fill what's MISSING, never overwrite a real punch:
 //       - half-day with no punch at all        → add both in + out
@@ -19,6 +20,17 @@ const SCHEDULE = {
   morning:   { in: 12 * 60 + 30, out: 16 * 60 },      // 12:30 / 16:00
   afternoon: { in: 19 * 60 + 30, out: 23 * 60 },      // 19:30 / 23:00
 } as const;
+
+// Fri/Sat/Sun the afternoon shift runs 30 min longer (out 23:30).
+const LATE_OUT_WEEKDAYS = new Set([5, 6, 0]);
+const LATE_AFTERNOON_OUT = 23 * 60 + 30;
+
+function scheduleFor(name: ShiftName, weekday: number): { in: number; out: number } {
+  if (name === 'afternoon' && LATE_OUT_WEEKDAYS.has(weekday)) {
+    return { ...SCHEDULE.afternoon, out: LATE_AFTERNOON_OUT };
+  }
+  return SCHEDULE[name];
+}
 
 // An in-time before this is a morning shift; at/after it, an afternoon shift.
 // Safely between the morning out-window end (17:00) and afternoon in (19:30).
@@ -65,7 +77,8 @@ export function computeWeekBackfill(args: {
   const result: BackfillPunch[] = [];
 
   for (const dateKey of weekDayKeys) {
-    const wanted = scheduledShifts(weekdayOfKey(dateKey));
+    const weekday = weekdayOfKey(dateKey);
+    const wanted = scheduledShifts(weekday);
     if (wanted.length === 0) continue;
 
     // Existing shifts on this day, grouped by half-day. More than one in a slot
@@ -78,7 +91,7 @@ export function computeWeekBackfill(args: {
     }
 
     for (const name of wanted) {
-      const sched = SCHEDULE[name];
+      const sched = scheduleFor(name, weekday);
       const existing = bySlot.get(name) ?? [];
       const outMs = new Date(madridWallTimeToIso(dateKey, sched.out)).getTime();
 

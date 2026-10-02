@@ -22,11 +22,11 @@ type RangeFilter = 'day' | 'last7' | 'last30' | 'week' | 'custom';
 
 // Contractual weekly working time (RD-ley 8/2019 schedule for this company).
 // Used only in the "week" range to flag under/over the weekly target.
-const WEEKLY_TARGET_HOURS = 41;
+const WEEKLY_TARGET_HOURS = 40;
 const WEEKLY_TARGET_MS = WEEKLY_TARGET_HOURS * 60 * 60 * 1000;
 
 // Renders a worked-time value; in week mode the time itself is colored green
-// (within) / red (over) the 41h target, followed by a neutral " / 41 小时"
+// (within) / red (over) the 40h target, followed by a neutral " / 40 小时"
 // suffix (with 📈 when over). Outside week mode it's the plain neutral value.
 function WeeklyHoursValue({
   ms,
@@ -830,7 +830,7 @@ export function AdminDashboard() {
         <div className="app-card p-4 space-y-3">
           <div className="flex items-baseline justify-between gap-3">
             <h2 className="text-xs font-semibold uppercase tracking-wider text-slate-500">{t('admin.stats.title')}</h2>
-            {/* The grand total only maps to a single 41h target when one
+            {/* The grand total only maps to a single 40h target when one
                 employee is filtered; otherwise it sums several people. */}
             <span className="text-sm font-semibold tabular-nums">
               <WeeklyHoursValue

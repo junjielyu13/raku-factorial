@@ -66,7 +66,7 @@ describe('computeWeekBackfill', () => {
     const shifts = [shift(FRI, 12 * 60 + 34, 16 * 60 + 15)];
     expect(view(run(shifts).filter(p => p.dateKey === FRI))).toEqual([
       '2026-06-05 afternoon in@19:30',
-      '2026-06-05 afternoon out@23:00',
+      '2026-06-05 afternoon out@23:30',
     ]);
   });
 
@@ -105,5 +105,27 @@ describe('computeWeekBackfill', () => {
       '2026-06-01 afternoon in@19:30',
       '2026-06-01 afternoon out@23:00',
     ]);
+  });
+
+  it('Fri/Sat/Sun afternoon ends at 23:30; Mon/Thu at 23:00', () => {
+    const outs = view(run([])).filter(v => v.includes('afternoon out'));
+    expect(outs).toEqual([
+      '2026-06-01 afternoon out@23:00',
+      '2026-06-04 afternoon out@23:00',
+      '2026-06-05 afternoon out@23:30',
+      '2026-06-06 afternoon out@23:30',
+      '2026-06-07 afternoon out@23:30',
+    ]);
+  });
+
+  it('an empty week backfills exactly the 40h contractual schedule', () => {
+    const punches = run([]);
+    let ms = 0;
+    for (let i = 0; i < punches.length; i += 2) {
+      expect(punches[i].kind).toBe('in');
+      expect(punches[i + 1].kind).toBe('out');
+      ms += new Date(punches[i + 1].timeIso).getTime() - new Date(punches[i].timeIso).getTime();
+    }
+    expect(ms).toBe(40 * 60 * 60 * 1000);
   });
 });
