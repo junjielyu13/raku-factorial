@@ -193,6 +193,13 @@ interface Messages {
       downloadPdf: string;
       generating: string;
       failed: string;        // uses {code}
+      employeeLabel: string;
+      allEmployees: string;
+      fileModeLabel: string;
+      fileCombined: string;
+      filePerEmployee: string;
+      perEmployeeHint: string;
+      noData: string;
       excel: {
         summarySheet: string;
         detailSheet: string;
@@ -461,6 +468,13 @@ export const MESSAGES: Record<Lang, Messages> = {
         downloadPdf: '下载 PDF',
         generating: '生成中…',
         failed: '导出失败：{code}',
+        employeeLabel: '员工',
+        allEmployees: '全部员工',
+        fileModeLabel: '文件',
+        fileCombined: '合并成一个文件',
+        filePerEmployee: '每人一个文件',
+        perEmployeeHint: '会依次下载多个文件；如果浏览器询问是否允许下载多个文件，请选择允许。',
+        noData: '所选范围内没有打卡记录。',
         excel: {
           summarySheet: '汇总',
           detailSheet: '明细',
@@ -737,6 +751,13 @@ export const MESSAGES: Record<Lang, Messages> = {
         downloadPdf: 'Download PDF',
         generating: 'Generating…',
         failed: 'Export failed: {code}',
+        employeeLabel: 'Employee',
+        allEmployees: 'All employees',
+        fileModeLabel: 'Files',
+        fileCombined: 'One combined file',
+        filePerEmployee: 'One file per employee',
+        perEmployeeHint: 'Several files will download one after another; if the browser asks to allow multiple downloads, choose Allow.',
+        noData: 'No punches in the selected range.',
         excel: {
           summarySheet: 'Summary',
           detailSheet: 'Detail',
@@ -1013,6 +1034,13 @@ export const MESSAGES: Record<Lang, Messages> = {
         downloadPdf: 'Descargar PDF',
         generating: 'Generando…',
         failed: 'Exportación fallida: {code}',
+        employeeLabel: 'Empleado',
+        allEmployees: 'Todos los empleados',
+        fileModeLabel: 'Archivos',
+        fileCombined: 'Un único archivo',
+        filePerEmployee: 'Un archivo por empleado',
+        perEmployeeHint: 'Se descargarán varios archivos seguidos; si el navegador pregunta si permitir varias descargas, elige Permitir.',
+        noData: 'No hay fichajes en el periodo seleccionado.',
         excel: {
           summarySheet: 'Resumen',
           detailSheet: 'Detalle',

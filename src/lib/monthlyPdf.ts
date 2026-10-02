@@ -203,9 +203,10 @@ export function buildDocDefinition(model: EmployeeReport[], company: CompanyInfo
 // Build the report from the month's punches and trigger a browser download.
 // pdfmake (and its embedded fonts) is imported here, lazily, so it stays out of
 // the main bundle and is only fetched when the user actually exports a PDF.
-// `dni` maps employee email → DNI/NIE (see `fetchDniByEmail`).
+// `dni` maps employee email → DNI/NIE (see `fetchDniByEmail`). `nameSuffix`
+// (e.g. an employee slug) is appended to the filename for per-employee files.
 export async function downloadMonthlyPdf(
-  punches: PunchRow[], period: Period, dni: Record<string, string>, company: CompanyInfo,
+  punches: PunchRow[], period: Period, dni: Record<string, string>, company: CompanyInfo, nameSuffix?: string,
 ): Promise<void> {
   const doc = buildDocDefinition(buildReportModel(punches, dni), company, period);
   /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -214,5 +215,6 @@ export async function downloadMonthlyPdf(
   const pdfMake = pdfMakeMod.default ?? pdfMakeMod;
   pdfMake.vfs = vfsMod.default ?? vfsMod;
   /* eslint-enable @typescript-eslint/no-explicit-any */
-  pdfMake.createPdf(doc).download(`registro-jornada-${periodFileSuffix(period)}.pdf`);
+  const suffix = nameSuffix ? `-${nameSuffix}` : '';
+  pdfMake.createPdf(doc).download(`registro-jornada-${periodFileSuffix(period)}${suffix}.pdf`);
 }

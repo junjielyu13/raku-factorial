@@ -40,7 +40,7 @@ export interface ExcelLabels {
   colHours: string;
 }
 
-export async function downloadExcel(punches: PunchRow[], period: Period, labels: ExcelLabels): Promise<void> {
+export async function downloadExcel(punches: PunchRow[], period: Period, labels: ExcelLabels, nameSuffix?: string): Promise<void> {
   const { summary, detail } = buildExcelModel(punches);
   const { default: ExcelJS } = await import('exceljs');
   const wb = new ExcelJS.Workbook();
@@ -76,7 +76,8 @@ export async function downloadExcel(punches: PunchRow[], period: Period, labels:
   const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
-  a.href = url; a.download = `raku-sant-cugat-punches-${periodFileSuffix(period)}.xlsx`;
+  const suffix = nameSuffix ? `-${nameSuffix}` : '';
+  a.href = url; a.download = `raku-sant-cugat-punches-${periodFileSuffix(period)}${suffix}.xlsx`;
   document.body.appendChild(a); a.click();
   document.body.removeChild(a); URL.revokeObjectURL(url);
 }
