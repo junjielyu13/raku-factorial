@@ -9,3 +9,6 @@ playwright-report/
 test-results/
 .vercel/
 .vercel
+
+# Local-only personal data (employee DNI exports etc.) — never commit
+private/
